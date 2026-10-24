@@ -21,7 +21,15 @@ from hipaa_audit.assess.prompts import PROMPT_VERSION
 from hipaa_audit.catalog import Catalog, load_catalog
 from hipaa_audit.config import Settings
 from hipaa_audit.ingest import ALLOWED_EXTENSIONS, UnsupportedDocument, ingest_document
-from hipaa_audit.report import FLAG_LABELS, build_report, control_summary, render_json, render_markdown, summarize
+from hipaa_audit.report import (
+    FLAG_LABELS,
+    build_report,
+    control_summary,
+    needs_review,
+    render_json,
+    render_markdown,
+    summarize,
+)
 from hipaa_audit.retrieval import Embedder, HybridIndex, make_embedder
 from hipaa_audit.storage import ACTIVE_STATUSES, AuditRecord, Repository, SqliteCache, new_id, utcnow
 
@@ -314,6 +322,7 @@ class AuditService:
         for f in self.repo.get_findings(audit_id):
             view = f.model_dump(exclude={"control_id"})
             view["control"] = control_summary(controls.get(f.control_id), f.control_id)
+            view["needs_review"] = needs_review(f.flags)
             views.append(view)
         return views
 

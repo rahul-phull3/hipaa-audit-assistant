@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -50,6 +51,11 @@ _TO_REVIEW_FLAGS = frozenset(
 )
 
 
+def needs_review(flags: Iterable[str]) -> bool:
+    """True when a finding carries a flag that means a person should look at it before relying on it."""
+    return bool(_TO_REVIEW_FLAGS.intersection(flags))
+
+
 def control_summary(control: Control | None, control_id: str) -> dict[str, Any]:
     if control is None:  # the catalog edition changed since this audit ran
         return {
@@ -81,7 +87,7 @@ def summarize(findings: list[Finding], catalog: Catalog) -> dict[str, Any]:
     return {
         "assessed": len(findings),
         **{status: totals.get(status, 0) for status in STATUS_ORDER},
-        "needs_review": sum(1 for f in findings if _TO_REVIEW_FLAGS & set(f.flags)),
+        "needs_review": sum(1 for f in findings if needs_review(f.flags)),
         "by_safeguard": {
             sg: {**{s: counts.get(s, 0) for s in STATUS_ORDER}, "total": sum(counts.values())}
             for sg, counts in sorted(

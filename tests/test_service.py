@@ -178,6 +178,7 @@ class RunTests(unittest.IsolatedAsyncioTestCase):
         views = self.svc.finding_views(record.id)
         self.assertEqual(len(views), 48)
         self.assertEqual(views[0]["control"]["id"], CATALOG.controls[0].id)
+        self.assertEqual(sum(v["needs_review"] for v in views), summary["needs_review"])
         content, media, name = self.svc.report(record.id, "md")
         self.assertIn("# HIPAA Security Rule policy review", content)
         self.assertEqual((media.split(";")[0], name), ("text/markdown", "hipaa-review-policy.md"))
