@@ -91,9 +91,14 @@ class AnthropicBackendTests(unittest.IsolatedAsyncioTestCase):
         raw, usage = await backend.assess(self.control, [CHUNK])
         call = client.calls[0]
         self.assertEqual(call["model"], "claude-test")
-        self.assertEqual(call["tool_choice"], {"type": "tool", "name": TOOL_NAME})
+        # Claude Sonnet 5.5 rejects forced tool use and sampling parameters with a 400, so neither may be sent.
+        self.assertEqual(call["tool_choice"], {"type": "auto"})
+        for rejected in ("temperature", "top_p", "top_k"):
+            self.assertNotIn(rejected, call)
         self.assertEqual([t["name"] for t in call["tools"]], [TOOL_NAME])
-        self.assertEqual(call["temperature"], 0.0)
+        self.assertIs(call["tools"][0]["strict"], True)
+        self.assertEqual(call["extra_body"], {"output_config": {"effort": "medium"}})
+        self.assertEqual(call["max_tokens"], 4096)
         self.assertEqual(call["system"][0]["cache_control"], {"type": "ephemeral"})
         self.assertIn('<excerpt id="c0001" page="2" section="Backups">', call["messages"][0]["content"])
         self.assertEqual((raw.status, raw.evidence[0].excerpt_id), ("met", "c0001"))
@@ -116,7 +121,21 @@ class AnthropicBackendTests(unittest.IsolatedAsyncioTestCase):
         raw, usage = await backend.assess(self.control, [CHUNK])
         self.assertEqual(raw.status, "met")
         self.assertEqual([c["max_tokens"] for c in client.calls], [500, 1000])
+        self.assertNotIn("Respond only by calling", client.calls[0]["messages"][0]["content"])
+        self.assertIn("Respond only by calling", client.calls[1]["messages"][0]["content"])
         self.assertEqual(usage.input_tokens, 10)
+
+    async def test_effort_can_be_left_to_the_api(self):
+        client = FakeClient(tool_response(GOOD))
+        backend = AnthropicBackend(api_key=None, model="m", client=client, effort=None)
+        await backend.assess(self.control, [CHUNK])
+        self.assertNotIn("extra_body", client.calls[0])
+
+    async def test_thinking_blocks_before_the_tool_call_are_ignored(self):
+        response = tool_response(GOOD)
+        response.content.insert(0, SimpleNamespace(type="thinking", thinking="", signature="x"))
+        raw, _ = await AnthropicBackend(api_key=None, model="m", client=FakeClient(response)).assess(self.control, [CHUNK])
+        self.assertEqual(raw.status, "met")
 
     async def test_truncated_twice_raises_format_error(self):
         cut = tool_response(GOOD, stop_reason="max_tokens")
@@ -189,6 +208,7 @@ class ConfigTests(unittest.TestCase):
     def test_defaults(self):
         s = Settings.from_env({})
         self.assertEqual((s.llm_backend, s.model, s.embedder, s.concurrency, s.top_k), ("anthropic", "claude-sonnet-5-5", "auto", 4, 6))
+        self.assertEqual(s.effort, "medium")
         self.assertIsNone(s.api_key)
         self.assertEqual(s.max_upload_bytes, 10 * 1024 * 1024)
 
@@ -199,8 +219,19 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual((s.llm_backend, s.concurrency), ("heuristic", 8))
         self.assertEqual(s.cors_origins, ("http://a.test", "http://b.test"))
 
+    def test_effort_values(self):
+        self.assertEqual(Settings.from_env({"HIPAA_AUDIT_EFFORT": "HIGH"}).effort, "high")
+        self.assertIsNone(Settings.from_env({"HIPAA_AUDIT_EFFORT": "default"}).effort)
+        self.assertIsNone(Settings.from_env({"HIPAA_AUDIT_EFFORT": ""}).effort)
+
     def test_invalid_values(self):
-        for env in ({"HIPAA_AUDIT_LLM_BACKEND": "gpt"}, {"HIPAA_AUDIT_EMBEDDER": "x"}, {"HIPAA_AUDIT_CONCURRENCY": "four"}, {"HIPAA_AUDIT_MAX_PAGES": "0"}):
+        for env in (
+            {"HIPAA_AUDIT_LLM_BACKEND": "gpt"},
+            {"HIPAA_AUDIT_EMBEDDER": "x"},
+            {"HIPAA_AUDIT_EFFORT": "extreme"},
+            {"HIPAA_AUDIT_CONCURRENCY": "four"},
+            {"HIPAA_AUDIT_MAX_PAGES": "0"},
+        ):
             with self.assertRaises(ConfigError, msg=str(env)):
                 Settings.from_env(env)
 

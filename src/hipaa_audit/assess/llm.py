@@ -1,6 +1,8 @@
 """Model backends.
 
-* ``AnthropicBackend`` asks Claude for one forced tool call per control (``record_assessment``) and parses it.
+* ``AnthropicBackend`` asks Claude to call one tool per control (``record_assessment``) and parses it. The request follows the
+  Claude Sonnet 5.5 rules: ``tool_choice`` is ``auto`` with a ``strict`` tool (that model rejects forced tool use with a 400),
+  and no sampling parameters are sent (it rejects ``temperature``, ``top_p`` and ``top_k``).
 * ``HeuristicBackend`` is an offline keyword matcher for demos, tests and CI. It is not an AI model and is labelled that way
   wherever its output appears.
 
@@ -42,6 +44,9 @@ class LLMFormatError(LLMError):
     """The model did not return a usable tool call."""
 
 
+RETRY_REMINDER = "Your previous answer could not be used. Respond only by calling the record_assessment tool, once."
+
+
 class LLMBackend(Protocol):
     name: str
 
@@ -67,7 +72,7 @@ def _parse(response: Any) -> RawAssessment:
                 return RawAssessment.model_validate(block.input)
             except ValueError as exc:
                 raise LLMFormatError(f"tool input did not match the schema: {exc}") from exc
-    raise LLMFormatError("the response had no record_assessment tool call")
+    raise LLMFormatError(f"the response had no record_assessment tool call (stop_reason={getattr(response, 'stop_reason', None)})")
 
 
 class AnthropicBackend:
@@ -76,9 +81,10 @@ class AnthropicBackend:
         *,
         api_key: str | None,
         model: str,
-        max_tokens: int = 1024,
-        timeout: float = 60.0,
+        max_tokens: int = 4096,
+        timeout: float = 120.0,
         max_retries: int = 4,
+        effort: str | None = "medium",
         client: Any = None,
     ) -> None:
         try:
@@ -93,9 +99,24 @@ class AnthropicBackend:
         self._sdk = anthropic
         self.model = model
         self.name = f"anthropic:{model}"
-        self._max_tokens = max_tokens
+        self._max_tokens = max_tokens  # covers thinking as well as the answer; the retry doubles it
+        self._effort = effort
         # Transport retries (429, 5xx, connection errors) are handled by the SDK client itself.
         self._client = client or anthropic.AsyncAnthropic(api_key=api_key, timeout=timeout, max_retries=max_retries)
+
+    def _request(self, user_message: str, attempt: int) -> dict[str, Any]:
+        content = user_message if attempt == 1 else f"{user_message}\n\n{RETRY_REMINDER}"
+        request: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": self._max_tokens * attempt,
+            "system": [{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+            "messages": [{"role": "user", "content": content}],
+            "tools": [TOOL_SPEC],
+            "tool_choice": {"type": "auto"},
+        }
+        if self._effort:  # passed through extra_body so SDK releases that predate the field still work
+            request["extra_body"] = {"output_config": {"effort": self._effort}}
+        return request
 
     async def assess(self, control: Control, excerpts: list[Chunk]) -> tuple[RawAssessment, Usage]:
         user_message = build_user_message(control, excerpts)
@@ -103,15 +124,7 @@ class AnthropicBackend:
         last_error: Exception | None = None
         for attempt in (1, 2):  # a second attempt only for a malformed or truncated answer
             try:
-                response = await self._client.messages.create(
-                    model=self.model,
-                    max_tokens=self._max_tokens * attempt,
-                    temperature=0.0,
-                    system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
-                    messages=[{"role": "user", "content": user_message}],
-                    tools=[TOOL_SPEC],
-                    tool_choice={"type": "tool", "name": TOOL_NAME},
-                )
+                response = await self._client.messages.create(**self._request(user_message, attempt))
             except (self._sdk.AuthenticationError, self._sdk.PermissionDeniedError) as exc:
                 raise LLMAuthError("the Anthropic API rejected the key, or the request was not permitted") from exc
             except self._sdk.APIError as exc:

@@ -9,6 +9,7 @@ from pathlib import Path
 
 LLM_BACKENDS = ("anthropic", "heuristic")
 EMBEDDERS = ("auto", "fastembed", "hashing")
+EFFORTS = ("low", "medium", "high", "xhigh", "max")  # "default" omits the field and lets the API choose
 
 
 class ConfigError(ValueError):
@@ -48,6 +49,7 @@ class Settings:
     llm_backend: str = "anthropic"
     anthropic_api_key: str | None = None
     model: str = "claude-sonnet-5-5"
+    effort: str | None = "medium"
     embedder: str = "auto"
     db_path: str = "./data/audits.sqlite3"
     max_upload_mb: int = 10
@@ -71,11 +73,17 @@ class Settings:
         embedder = env.get("HIPAA_AUDIT_EMBEDDER", "auto").strip().lower()
         if embedder not in EMBEDDERS:
             raise ConfigError(f"HIPAA_AUDIT_EMBEDDER must be one of {EMBEDDERS}, got {embedder!r}")
+        effort: str | None = env.get("HIPAA_AUDIT_EFFORT", "medium").strip().lower()
+        if effort in ("", "default", "none"):
+            effort = None
+        elif effort not in EFFORTS:
+            raise ConfigError(f"HIPAA_AUDIT_EFFORT must be one of {EFFORTS} or 'default', got {effort!r}")
         origins = tuple(o.strip() for o in env.get("HIPAA_AUDIT_CORS_ORIGINS", "").split(",") if o.strip())
         return cls(
             llm_backend=backend,
             anthropic_api_key=env.get("ANTHROPIC_API_KEY") or None,
             model=env.get("HIPAA_AUDIT_MODEL") or "claude-sonnet-5-5",
+            effort=effort,
             embedder=embedder,
             db_path=env.get("HIPAA_AUDIT_DB_PATH") or "./data/audits.sqlite3",
             max_upload_mb=_int(env, "HIPAA_AUDIT_MAX_UPLOAD_MB", 10),

@@ -1,4 +1,9 @@
-"""The structured answer the model must give: one forced tool call per control."""
+"""The structured answer the model must give: one tool call per control.
+
+The tool is declared ``strict`` so the API validates the input against this schema. Strict mode accepts only a subset of JSON
+Schema (every object closed with ``additionalProperties: false``, no numeric bounds), so ranges are stated in the descriptions
+and enforced again here when the answer is parsed.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ TOOL_NAME = "record_assessment"
 TOOL_SPEC: dict[str, Any] = {
     "name": TOOL_NAME,
     "description": "Record the assessment of one HIPAA Security Rule control against the provided policy excerpts.",
+    "strict": True,
     "input_schema": {
         "type": "object",
         "properties": {
@@ -32,6 +38,7 @@ TOOL_SPEC: dict[str, Any] = {
                         "quote": {"type": "string", "description": "Copied character for character from the excerpt."},
                     },
                     "required": ["excerpt_id", "quote"],
+                    "additionalProperties": False,
                 },
             },
             "missing_elements": {
@@ -39,9 +46,10 @@ TOOL_SPEC: dict[str, Any] = {
                 "items": {"type": "string"},
                 "description": "Expected elements the excerpts do not show. Must be empty when status is met.",
             },
-            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "confidence": {"type": "number", "description": "Your confidence in the status, from 0 (none) to 1 (certain)."},
         },
         "required": ["status", "rationale", "evidence", "missing_elements", "confidence"],
+        "additionalProperties": False,
     },
 }
 
