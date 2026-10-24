@@ -106,6 +106,43 @@ class CliTests(unittest.TestCase):
         self.addCleanup(repo.close)
         self.assertEqual(repo.count_audits(), 0)
 
+    def test_eval_prints_a_report_on_synthetic_policies(self):
+        code, out, err = run_cli(
+            "eval", "--backend", "heuristic", "--documents", "1", "--difficulty", "easy", "--controls", ",".join(IDS)
+        )
+        self.assertEqual(code, 0, err)
+        self.assertIn("# Evaluation on synthetic policies", out)
+        self.assertIn("not an estimate of accuracy on real policies", out)
+        self.assertIn("Scored document 1/1", err)
+
+    def test_eval_json_to_a_file(self):
+        target = Path(self.dir.name) / "eval.json"
+        code, out, err = run_cli(
+            "eval",
+            "--backend",
+            "heuristic",
+            "--documents",
+            "2",
+            "--seed",
+            "5",
+            "--format",
+            "json",
+            "-o",
+            str(target),
+            "-q",
+        )
+        self.assertEqual((code, out, err.strip()), (0, "", f"Report written to {target}"))
+        report = json.loads(target.read_text(encoding="utf-8"))
+        self.assertEqual((report["run"]["seeds"], report["run"]["difficulty"]), ([5, 6], "hard"))
+        self.assertEqual(report["scores"]["total"], 96)
+
+    def test_eval_refuses_bad_input_and_a_missing_key(self):
+        code, _out, err = run_cli("eval", "--backend", "heuristic", "--controls", "nope")
+        self.assertEqual((code, "unknown control ids" in err), (2, True))
+        code, _out, err = run_cli("eval", env={"HIPAA_AUDIT_LLM_BACKEND": "anthropic", "ANTHROPIC_API_KEY": ""})
+        self.assertEqual((code, "ANTHROPIC_API_KEY" in err), (2, True))
+        self.assertNotIn("model calls", err)  # nothing was started, so nothing could have been spent
+
     def test_serve_starts_uvicorn_with_the_app(self):
         with mock.patch("uvicorn.run") as run:
             code, _out, err = run_cli("serve", "--port", "8123", "--db", ":memory:", "--backend", "heuristic")

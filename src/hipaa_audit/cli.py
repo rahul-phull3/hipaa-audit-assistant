@@ -1,4 +1,4 @@
-"""Command line: audit a file without a server, start the server, list the controls, purge old audits.
+"""Command line: audit a file without a server, start the server, evaluate a backend, list the controls, purge old audits.
 
 Exit codes: 0 success, 1 the audit failed, 2 bad input or configuration, 130 interrupted.
 """
@@ -15,8 +15,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from hipaa_audit import __version__
+from hipaa_audit.assess.factory import make_backend
+from hipaa_audit.assess.llm import LLMAuthError
 from hipaa_audit.catalog import load_catalog
 from hipaa_audit.config import ConfigError, Settings, load_env_file
+from hipaa_audit.evaluation import DIFFICULTIES, build_report, evaluate, render_json, render_markdown
+from hipaa_audit.retrieval import make_embedder
 from hipaa_audit.service import AuditService, ServiceError
 from hipaa_audit.storage import ACTIVE_STATUSES, Repository, StorageError
 
@@ -97,6 +101,51 @@ async def _audit(args: argparse.Namespace) -> int:
         await service.shutdown()
 
 
+async def _eval(args: argparse.Namespace) -> int:
+    settings = _settings(args)
+    catalog = load_catalog()
+    control_ids = [c.strip() for c in args.controls.split(",") if c.strip()] if args.controls else None
+    try:
+        controls = catalog.select(control_ids)
+        backend = make_backend(settings)
+    except KeyError as exc:
+        _say(f"error: {exc.args[0]}")
+        return 2
+    except RuntimeError as exc:
+        _say(f"error: {exc}")
+        return 2
+    seeds = list(range(args.seed, args.seed + args.documents))
+    if not backend.name.startswith("heuristic"):
+        _say(
+            f"Evaluating {backend.name}: {len(seeds) * len(controls)} model calls "
+            f"({len(seeds)} documents x {len(controls)} controls). Press Ctrl+C to stop."
+        )
+    try:
+        result = await evaluate(
+            lambda _policy: backend,
+            seeds=seeds,
+            difficulty=args.difficulty,
+            control_ids=control_ids,
+            embedder=make_embedder(settings.embedder),
+            top_k=settings.top_k,
+            concurrency=settings.concurrency,
+            progress=None if args.quiet else lambda done, total: _say(f"Scored document {done}/{total}"),
+        )
+    except LLMAuthError:
+        _say(
+            "error: the Anthropic API rejected the API key or the request. Check ANTHROPIC_API_KEY and the model name."
+        )
+        return 1
+    report = build_report(result)
+    content = render_json(report) if args.format == "json" else render_markdown(report)
+    if args.output:
+        Path(args.output).write_text(content, encoding="utf-8")
+        _say(f"Report written to {args.output}")
+    else:
+        sys.stdout.write(content)
+    return 0
+
+
 def _serve(args: argparse.Namespace) -> int:
     settings = _settings(args)
     try:
@@ -154,6 +203,24 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument("--db", help="keep the audit in this SQLite file (default: nothing is stored)")
     audit.add_argument("-q", "--quiet", action="store_true", help="no progress or summary on stderr")
     audit.set_defaults(run=lambda a: asyncio.run(_audit(a)))
+
+    evaluation = sub.add_parser(
+        "eval",
+        help="score a backend on synthetic policies with known answers (not an accuracy estimate for real policies)",
+    )
+    evaluation.add_argument("--backend", choices=("anthropic", "heuristic"), help="override HIPAA_AUDIT_LLM_BACKEND")
+    evaluation.add_argument(
+        "--documents", type=int, default=5, help="how many synthetic policies to generate (default 5)"
+    )
+    evaluation.add_argument(
+        "--seed", type=int, default=1, help="seed of the first policy; the others follow in sequence"
+    )
+    evaluation.add_argument("--difficulty", choices=DIFFICULTIES, default="hard")
+    evaluation.add_argument("--controls", help="comma-separated control ids (default: all)")
+    evaluation.add_argument("--format", choices=("md", "json"), default="md")
+    evaluation.add_argument("-o", "--output", help="write the report to this file instead of stdout")
+    evaluation.add_argument("-q", "--quiet", action="store_true", help="no progress on stderr")
+    evaluation.set_defaults(run=lambda a: asyncio.run(_eval(a)))
 
     serve = sub.add_parser("serve", help="start the web server")
     serve.add_argument("--host", default="127.0.0.1")
