@@ -20,10 +20,12 @@ from starlette.staticfiles import StaticFiles
 
 from hipaa_audit import __version__
 from hipaa_audit.api.middleware import (
+    AllowedHostsMiddleware,
     ApiKeyMiddleware,
     BodyLimitMiddleware,
     BodyTooLarge,
     ErrorBoundaryMiddleware,
+    OriginCheckMiddleware,
     SecurityHeadersMiddleware,
     error_body,
 )
@@ -234,8 +236,11 @@ def create_app(settings: Settings | None = None, service: AuditService | None = 
 
         routes = [*api, Route("/", root, methods=["GET"])]
 
-    # Outermost first: security headers wrap everything, then CORS, then the error boundary, the API key and the body limit.
+    # Outermost first: security headers wrap everything, then the host check, CORS, the error boundary, the origin check, the API
+    # key and the body limit.
     middleware = [Middleware(SecurityHeadersMiddleware)]
+    if settings.allowed_hosts:
+        middleware.append(Middleware(AllowedHostsMiddleware, hosts=settings.allowed_hosts))
     if settings.cors_origins:
         middleware.append(
             Middleware(
@@ -248,6 +253,7 @@ def create_app(settings: Settings | None = None, service: AuditService | None = 
         )
     middleware += [
         Middleware(ErrorBoundaryMiddleware),
+        Middleware(OriginCheckMiddleware, allowed_origins=settings.cors_origins),
         Middleware(ApiKeyMiddleware, api_key=settings.api_key),
         Middleware(BodyLimitMiddleware, max_bytes=settings.max_upload_bytes + MULTIPART_OVERHEAD),
     ]

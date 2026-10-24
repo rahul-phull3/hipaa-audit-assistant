@@ -25,6 +25,11 @@ from hipaa_audit.service import AuditService, ServiceError
 from hipaa_audit.storage import ACTIVE_STATUSES, Repository, StorageError
 
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+LOOPBACK_HOST_NAMES = (
+    "localhost",
+    "127.0.0.1",
+    "[::1]",
+)  # what a browser puts in the Host header for a loopback address
 
 
 def _settings(args: argparse.Namespace, *, default_db: str | None = None) -> Settings:
@@ -158,6 +163,9 @@ def _serve(args: argparse.Namespace) -> int:
     except ImportError as exc:  # pragma: no cover - depends on the environment
         _say(f"error: the web server dependencies are missing ({exc}). Install the package with pip install .")
         return 2
+    if args.host in LOOPBACK and not settings.allowed_hosts:
+        # Bound to this machine only: answer only to this machine's names, so a web page cannot reach the server through DNS rebinding.
+        settings = dataclasses.replace(settings, allowed_hosts=LOOPBACK_HOST_NAMES)
     if args.host not in LOOPBACK and not settings.api_key:
         _say(
             f"warning: listening on {args.host} without HIPAA_AUDIT_API_KEY. Anyone who can reach this port can upload "

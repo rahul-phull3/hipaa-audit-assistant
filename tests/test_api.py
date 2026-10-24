@@ -246,6 +246,79 @@ class SecurityTests(unittest.TestCase):
             other = client.get("/api/health", headers={"Origin": "http://evil.example"})
             self.assertNotIn("access-control-allow-origin", other.headers)
 
+    def test_a_browser_request_from_another_site_cannot_change_anything(self):
+        client, service = make_client()
+        self.addCleanup(service.repo.close)
+        with client:
+            for headers in (
+                {"Origin": "http://evil.example"},
+                {"Origin": "null"},  # a sandboxed or local page
+                {"Origin": "http://testserver.evil.example"},
+                {"Sec-Fetch-Site": "cross-site"},
+                {"Sec-Fetch-Site": "same-site"},  # another subdomain or port on the same host
+            ):
+                with self.subTest(headers=headers):
+                    refused = upload(client, headers=headers)
+                    self.assertEqual((refused.status_code, refused.json()["error"]["code"]), (403, "forbidden_origin"))
+                    self.assertEqual(refused.headers["x-content-type-options"], "nosniff")
+            self.assertEqual(service.repo.count_audits(), 0, "nothing was created by a refused request")
+            self.assertEqual(
+                client.delete("/api/audits/none", headers={"Origin": "http://evil.example"}).status_code, 403
+            )
+            self.assertEqual(
+                client.post("/api/audits/none/cancel", headers={"Origin": "http://evil.example"}).status_code, 403
+            )
+
+    def test_requests_that_are_not_cross_site_still_work(self):
+        client, service = make_client()
+        self.addCleanup(service.repo.close)
+        with client:
+            for headers in (
+                None,  # a script or curl: no browser headers at all
+                {"Origin": "http://testserver"},  # the page this server serves, calling its own API
+                {"Origin": "http://TESTSERVER", "Sec-Fetch-Site": "same-origin"},
+                {"Sec-Fetch-Site": "none"},  # typed into the address bar
+            ):
+                with self.subTest(headers=headers):
+                    self.assertEqual(upload(client, headers=headers).status_code, 202)
+            # Reading is left to the browser's own rule: without CORS headers another site cannot read the answer.
+            self.assertEqual(client.get("/api/status", headers={"Origin": "http://evil.example"}).status_code, 200)
+
+    def test_a_listed_cors_origin_may_change_things(self):
+        client, service = make_client(cors_origins=("http://localhost:5173/",))
+        self.addCleanup(service.repo.close)
+        with client:
+            self.assertEqual(upload(client, headers={"Origin": "http://localhost:5173"}).status_code, 202)
+            self.assertEqual(upload(client, headers={"Origin": "http://evil.example"}).status_code, 403)
+
+    def test_only_the_configured_host_names_are_answered(self):
+        client, service = make_client(allowed_hosts=("localhost", "127.0.0.1", "[::1]"))
+        self.addCleanup(service.repo.close)
+        with client:
+            for host in ("localhost", "localhost:8000", "LOCALHOST:8000", "127.0.0.1:9", "[::1]:8000", "[::1]"):
+                with self.subTest(host=host):
+                    self.assertEqual(client.get("/api/health", headers={"Host": host}).status_code, 200)
+            for host in (
+                "evil.example",
+                "evil.example:8000",
+                "localhost.evil.example",
+                "127.0.0.1.evil.example",
+                "[::2]:8000",
+                "",
+            ):
+                with self.subTest(host=host):
+                    refused = client.get("/api/health", headers={"Host": host})
+                    self.assertEqual((refused.status_code, refused.json()["error"]["code"]), (400, "invalid_host"))
+                    self.assertEqual(refused.headers["x-content-type-options"], "nosniff")
+            # the interface is protected too, not only the API
+            self.assertEqual(client.get("/", headers={"Host": "evil.example"}).status_code, 400)
+
+    def test_any_host_is_answered_when_none_are_configured(self):
+        client, service = make_client()
+        self.addCleanup(service.repo.close)
+        with client:
+            self.assertEqual(client.get("/api/health", headers={"Host": "anything.example"}).status_code, 200)
+
     def test_unexpected_errors_do_not_leak_details_and_keep_the_headers(self):
         client, service = make_client(cors_origins=("http://localhost:5173",))
         self.addCleanup(service.repo.close)

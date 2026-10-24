@@ -10,6 +10,7 @@ import hmac
 import json
 import logging
 from collections.abc import Iterable
+from urllib.parse import urlsplit
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -73,6 +74,78 @@ class ErrorBoundaryMiddleware:
             if started:  # the response is already on its way; the server has to close the connection
                 raise
             await send_json_error(send, 500, "internal_error", "Something went wrong on the server.")
+
+
+def host_name(host_header: str) -> str:
+    """The name in a Host header without its port, lower case: ``Localhost:8000`` -> ``localhost``, ``[::1]:8000`` -> ``[::1]``."""
+    host = host_header.strip().lower()
+    if host.startswith("["):
+        end = host.find("]")
+        return host[: end + 1] if end != -1 else host
+    return host.split(":", 1)[0]
+
+
+class AllowedHostsMiddleware:
+    """Answer only to the host names the server is meant to be reached by.
+
+    A web page can point its own domain at 127.0.0.1 (DNS rebinding) and then talk to a server on localhost as if it were its
+    own site, so the browser's same-origin rules do not stop it. The Host header still names the attacker's domain, which is
+    how this check turns the request away.
+    """
+
+    def __init__(self, app: ASGIApp, hosts: Iterable[str]) -> None:
+        self.app = app
+        self.hosts = frozenset(h.strip().lower() for h in hosts if h.strip())
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if not self.hosts or scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        supplied = host_name(dict(scope["headers"]).get(b"host", b"").decode("latin-1"))
+        if supplied not in self.hosts:
+            return await send_json_error(
+                send,
+                400,
+                "invalid_host",
+                "This server does not answer to that host name. Open it by the address it was started on, or add the name to HIPAA_AUDIT_ALLOWED_HOSTS.",
+            )
+        await self.app(scope, receive, send)
+
+
+class OriginCheckMiddleware:
+    """Refuse requests that change something when a browser sends them from another site.
+
+    A page on any site can make a visitor's browser POST a form to a server on localhost without a CORS preflight, which
+    would queue reviews (and spend model credits) on a server that has no API key. Browsers always say where such a request
+    came from (``Origin``, ``Sec-Fetch-Site``), so a request from a site that is neither this server's own origin nor a listed
+    CORS origin is refused. A request with neither header is not a browser's (curl, a script, another server) and passes.
+    """
+
+    CHANGING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+    def __init__(self, app: ASGIApp, allowed_origins: Iterable[str] = ()) -> None:
+        self.app = app
+        self.allowed = frozenset(o.strip().rstrip("/").lower() for o in allowed_origins if o.strip())
+
+    def _allowed(self, headers: dict[bytes, bytes]) -> bool:
+        origin = headers.get(b"origin", b"").decode("latin-1").strip().lower()
+        if origin:
+            host = headers.get(b"host", b"").decode("latin-1").strip().lower()
+            same_site_as_host = bool(host) and urlsplit(origin).netloc == host
+            return same_site_as_host or origin in self.allowed
+        fetch_site = headers.get(b"sec-fetch-site", b"").decode("latin-1").strip().lower()
+        return fetch_site in ("", "same-origin", "none")
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["method"] not in self.CHANGING or not scope["path"].startswith("/api/"):
+            return await self.app(scope, receive, send)
+        if not self._allowed(dict(scope["headers"])):
+            return await send_json_error(
+                send,
+                403,
+                "forbidden_origin",
+                "This request came from a site that is not allowed to change anything here.",
+            )
+        await self.app(scope, receive, send)
 
 
 class ApiKeyMiddleware:

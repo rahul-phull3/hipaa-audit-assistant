@@ -153,6 +153,45 @@ class CliTests(unittest.TestCase):
         self.assertTrue(callable(app))
         app.state.service.repo.close()
 
+    def test_serve_on_loopback_answers_only_to_loopback_host_names(self):
+        from starlette.testclient import TestClient
+
+        with mock.patch("uvicorn.run") as run:
+            run_cli("serve", "--db", ":memory:", "--backend", "heuristic")
+        app = run.call_args.args[0]
+        self.addCleanup(app.state.service.repo.close)
+        with TestClient(app, base_url="http://localhost:8000") as client:
+            self.assertEqual(client.get("/api/health").status_code, 200)
+        with TestClient(app, base_url="http://attacker.example:8000") as client:
+            self.assertEqual(client.get("/api/health").status_code, 400)
+
+    def test_serve_on_another_address_leaves_host_names_alone_unless_configured(self):
+        from starlette.testclient import TestClient
+
+        with mock.patch("uvicorn.run") as run:
+            run_cli("serve", "--host", "0.0.0.0", "--db", ":memory:", "--backend", "heuristic")
+        app = run.call_args.args[0]
+        self.addCleanup(app.state.service.repo.close)
+        with TestClient(app, base_url="http://review.example") as client:
+            self.assertEqual(client.get("/api/health").status_code, 200)
+        with mock.patch("uvicorn.run") as run:
+            run_cli(
+                "serve",
+                "--host",
+                "0.0.0.0",
+                "--db",
+                ":memory:",
+                "--backend",
+                "heuristic",
+                env={"HIPAA_AUDIT_ALLOWED_HOSTS": "review.example"},
+            )
+        app = run.call_args.args[0]
+        self.addCleanup(app.state.service.repo.close)
+        with TestClient(app, base_url="http://review.example") as client:
+            self.assertEqual(client.get("/api/health").status_code, 200)
+        with TestClient(app, base_url="http://other.example") as client:
+            self.assertEqual(client.get("/api/health").status_code, 400)
+
     def test_serve_warns_when_exposed_without_an_api_key(self):
         with mock.patch("uvicorn.run") as run:
             code, _out, err = run_cli("serve", "--host", "0.0.0.0", "--db", ":memory:", "--backend", "heuristic")

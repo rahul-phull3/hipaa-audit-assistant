@@ -290,6 +290,11 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual((s.llm_backend, s.concurrency), ("heuristic", 8))
         self.assertEqual(s.cors_origins, ("http://a.test", "http://b.test"))
 
+    def test_allowed_hosts_list(self):
+        self.assertEqual(Settings.from_env({}).allowed_hosts, ())
+        s = Settings.from_env({"HIPAA_AUDIT_ALLOWED_HOSTS": " Review.Example.com, [::1] ,"})
+        self.assertEqual(s.allowed_hosts, ("review.example.com", "[::1]"))
+
     def test_effort_values(self):
         self.assertEqual(Settings.from_env({"HIPAA_AUDIT_EFFORT": "HIGH"}).effort, "high")
         self.assertIsNone(Settings.from_env({"HIPAA_AUDIT_EFFORT": "default"}).effort)

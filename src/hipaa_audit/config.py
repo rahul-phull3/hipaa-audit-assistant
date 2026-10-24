@@ -73,6 +73,9 @@ class Settings:
     retention_days: int = 0  # 0 keeps audits until they are deleted
     api_key: str | None = None
     cors_origins: tuple[str, ...] = ()
+    allowed_hosts: tuple[
+        str, ...
+    ] = ()  # empty: any Host header is accepted (the server adds loopback names when it binds there)
     static_dir: str | None = None
 
     @property
@@ -94,6 +97,7 @@ class Settings:
         elif effort not in EFFORTS:
             raise ConfigError(f"HIPAA_AUDIT_EFFORT must be one of {EFFORTS} or 'default', got {effort!r}")
         origins = tuple(o.strip() for o in env.get("HIPAA_AUDIT_CORS_ORIGINS", "").split(",") if o.strip())
+        hosts = tuple(h.strip().lower() for h in env.get("HIPAA_AUDIT_ALLOWED_HOSTS", "").split(",") if h.strip())
         return cls(
             llm_backend=backend,
             anthropic_api_key=env.get("ANTHROPIC_API_KEY") or None,
@@ -110,5 +114,6 @@ class Settings:
             retention_days=_int(env, "HIPAA_AUDIT_RETENTION_DAYS", 0, minimum=0),
             api_key=env.get("HIPAA_AUDIT_API_KEY") or None,
             cors_origins=origins,
+            allowed_hosts=hosts,
             static_dir=env.get("HIPAA_AUDIT_STATIC_DIR") or None,
         )
