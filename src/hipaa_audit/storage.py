@@ -150,6 +150,9 @@ class Repository:
         if self.path != ":memory:":
             parent = Path(self.path).expanduser().resolve().parent
             parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            # Create the file owner-only before SQLite does. SQLite gives its write-ahead files the permissions the main file
+            # has when they are created, so creating it with the default umask would leave them readable by other users.
+            os.close(os.open(self.path, os.O_RDWR | os.O_CREAT, 0o600))
         self._lock = threading.RLock()
         self._db = sqlite3.connect(self.path, check_same_thread=False, isolation_level=None)
         self._db.row_factory = sqlite3.Row
@@ -164,10 +167,12 @@ class Repository:
             self._db.close()  # do not leak the connection when the database is unusable
             raise
         if self.path != ":memory:":
-            try:
-                os.chmod(self.path, 0o600)  # the file holds excerpts of policy documents
-            except OSError:  # pragma: no cover - e.g. a filesystem without permissions
-                pass
+            # The files hold the text of policy documents. This also tightens files an older release created.
+            for suffix in ("", "-wal", "-shm"):
+                try:
+                    os.chmod(self.path + suffix, 0o600)
+                except OSError:  # a write-ahead file that does not exist, or a filesystem without permissions
+                    pass
 
     # -- plumbing ---------------------------------------------------------------------------------------------------
 

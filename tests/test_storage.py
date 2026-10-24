@@ -206,6 +206,22 @@ class FileDatabaseTests(unittest.TestCase):
                 self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0o600)
                 self.assertEqual(stat.S_IMODE(os.stat(os.path.dirname(path)).st_mode) & 0o077, 0)
 
+    @unittest.skipUnless(os.name == "posix", "file permissions are a POSIX notion")
+    def test_write_ahead_files_are_private_too_even_with_a_permissive_umask(self):
+        previous = os.umask(0o022)  # the usual default: new files are readable by everyone
+        self.addCleanup(os.umask, previous)
+        with tempfile.TemporaryDirectory() as d:
+            os.chmod(d, 0o755)  # an existing, shared directory; only the files themselves can be private
+            path = os.path.join(d, "audits.sqlite3")
+            repo = Repository(path)
+            self.addCleanup(repo.close)
+            repo.create_audit(make_record(), make_chunks())
+            files = sorted(name for name in os.listdir(d) if name.startswith("audits.sqlite3"))
+            self.assertIn("audits.sqlite3-wal", files, "the test needs the write-ahead file to exist")
+            for name in files:
+                with self.subTest(file=name):
+                    self.assertEqual(stat.S_IMODE(os.stat(os.path.join(d, name)).st_mode) & 0o077, 0)
+
     def test_database_from_a_newer_version_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "future.sqlite3")
