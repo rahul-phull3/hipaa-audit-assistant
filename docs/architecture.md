@@ -193,8 +193,9 @@ prompt, the strict tool and the quote check above.
 | `findings` | One row per assessed control, as JSON, in catalog order |
 | `assessment_cache` | Raw answers keyed by prompt version, backend, control definition and the exact passage text |
 
-**The uploaded file itself is never stored**, only its hash and the text passages extracted from it, because the interface
-needs the text to show a quote in context and "run again" needs it to repeat a review. The passages are the policy text, so the
+**The application never stores the uploaded file itself**, only its hash and the text passages extracted from it, because the
+interface needs the text to show a quote in context and "run again" needs it to repeat a review. (While a request is being
+read, the web framework spools an upload over 1 MB to a temporary file that is deleted when the request ends.) The passages are the policy text, so the
 database is sensitive; see [security.md](security.md). Deleting a review removes its passages, findings and cached answers
 (`ON DELETE CASCADE`).
 
@@ -227,10 +228,12 @@ service map to one JSON shape and a fixed set of statuses. The middleware is wri
 outermost first:
 
 1. security headers (every response; a strict content security policy on pages, `no-store` on `/api`);
-2. CORS, only if origins are configured;
-3. an error boundary, so an unexpected exception becomes a generic `500` that still carries the security headers;
-4. the API key check, if a key is configured (`/api/health` stays public for health probes);
-5. the request body limit, applied from `Content-Length` and again while the body streams.
+2. the host check, when host names are configured or the server was started on a loopback address;
+3. CORS, only if origins are configured;
+4. an error boundary, so an unexpected exception becomes a generic `500` that still carries the security headers;
+5. the origin check, which refuses browser requests that change something when they come from another site;
+6. the API key check, if a key is configured (`/api/health` stays public for health probes);
+7. the request body limit, applied from `Content-Length` and again while the body streams.
 
 The same process serves the built interface from `HIPAA_AUDIT_STATIC_DIR`, or from `ui/dist` in a source checkout, so there is
 one origin and no CORS to configure.
