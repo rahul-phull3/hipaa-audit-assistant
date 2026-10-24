@@ -14,8 +14,13 @@ STOPWORDS = frozenset(
 )
 
 
+def _drop_e(w: str) -> str:
+    return w[:-1] if len(w) > 4 and w.endswith("e") else w
+
+
 def stem(word: str) -> str:
-    """A deliberately small suffix stripper. It only has to be consistent between documents and queries."""
+    """A deliberately small suffix stripper. It only has to be consistent between documents and queries
+    (share, shared and sharing meet at "shar"; encrypted and encrypt meet at "encrypt")."""
     w = word
     if len(w) > 4 and w.endswith("ies"):
         return w[:-3] + "y"
@@ -25,12 +30,12 @@ def stem(word: str) -> str:
             if any(ch in _VOWELS for ch in base):
                 if len(base) > 2 and base[-1] == base[-2] and base[-1] not in "lsz":
                     base = base[:-1]
-                return base
+                return _drop_e(base)
     if len(w) > 5 and w.endswith(("sses", "xes")):
         return w[:-2]
     if len(w) > 3 and w.endswith("s") and not w.endswith(("ss", "us", "is")):
-        return w[:-1]
-    return w
+        w = w[:-1]
+    return _drop_e(w)
 
 
 def tokenize(text: str) -> list[str]:
