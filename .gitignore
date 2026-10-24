@@ -18,16 +18,12 @@ dist/
 *.sqlite3
 *.db
 
-# Frontend
-frontend/node_modules/
-frontend/dist/
-
 # Editors / OS
 .idea/
 .vscode/
 .DS_Store
 
-# UI build output and local tooling
+# Interface: dependencies, build output and test output
 ui/node_modules
 ui/dist/
 ui/.test-build/
