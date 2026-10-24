@@ -21,7 +21,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from hipaa_audit.assess.schema import RawAssessment
-from hipaa_audit.models import Chunk, Finding, Usage
+from hipaa_audit.models import Chunk, Finding, Span, Usage
 
 SCHEMA_VERSION = 1
 AuditStatus = Literal["queued", "running", "completed", "failed", "cancelled"]
@@ -59,6 +59,7 @@ CREATE TABLE chunks (
     section  TEXT NOT NULL,
     text     TEXT NOT NULL,
     n_words  INTEGER NOT NULL,
+    spans    TEXT NOT NULL DEFAULT '[]',
     PRIMARY KEY (audit_id, chunk_id)
 );
 
@@ -119,6 +120,21 @@ _AUDIT_COLUMNS = (
     "id, filename, sha256, size_bytes, pages, status, created_at, started_at, finished_at, backend, embedder, catalog_version, "
     "prompt_version, control_ids, total_controls, done_controls, chunk_count, usage, error"
 )
+
+
+_CHUNK_COLUMNS = "chunk_id, ord, page, section, text, n_words, spans"
+
+
+def _chunk_from_row(r: sqlite3.Row) -> Chunk:
+    return Chunk(
+        id=r["chunk_id"],
+        ord=r["ord"],
+        page=r["page"],
+        section=r["section"],
+        text=r["text"],
+        n_words=r["n_words"],
+        spans=[Span(**s) for s in json.loads(r["spans"] or "[]")],
+    )
 
 
 def _audit_from_row(row: sqlite3.Row) -> AuditRecord:
@@ -207,8 +223,11 @@ class Repository:
                 ),
             )
             db.executemany(
-                "INSERT INTO chunks (audit_id, chunk_id, ord, page, section, text, n_words) VALUES (?,?,?,?,?,?,?)",
-                [(record.id, c.id, c.ord, c.page, c.section, c.text, c.n_words) for c in chunks],
+                "INSERT INTO chunks (audit_id, chunk_id, ord, page, section, text, n_words, spans) VALUES (?,?,?,?,?,?,?,?)",
+                [
+                    (record.id, c.id, c.ord, c.page, c.section, c.text, c.n_words, json.dumps([s.model_dump() for s in c.spans]))
+                    for c in chunks
+                ],
             )
 
     def get_audit(self, audit_id: str) -> AuditRecord | None:
@@ -294,19 +313,16 @@ class Repository:
     def get_chunks(self, audit_id: str) -> list[Chunk]:
         with self._lock:
             rows = self._db.execute(
-                "SELECT chunk_id, ord, page, section, text, n_words FROM chunks WHERE audit_id = ? ORDER BY ord", (audit_id,)
+                f"SELECT {_CHUNK_COLUMNS} FROM chunks WHERE audit_id = ? ORDER BY ord", (audit_id,)
             ).fetchall()
-        return [Chunk(id=r["chunk_id"], ord=r["ord"], page=r["page"], section=r["section"], text=r["text"], n_words=r["n_words"]) for r in rows]
+        return [_chunk_from_row(r) for r in rows]
 
     def get_chunk(self, audit_id: str, chunk_id: str) -> Chunk | None:
         with self._lock:
             r = self._db.execute(
-                "SELECT chunk_id, ord, page, section, text, n_words FROM chunks WHERE audit_id = ? AND chunk_id = ?",
-                (audit_id, chunk_id),
+                f"SELECT {_CHUNK_COLUMNS} FROM chunks WHERE audit_id = ? AND chunk_id = ?", (audit_id, chunk_id)
             ).fetchone()
-        if r is None:
-            return None
-        return Chunk(id=r["chunk_id"], ord=r["ord"], page=r["page"], section=r["section"], text=r["text"], n_words=r["n_words"])
+        return None if r is None else _chunk_from_row(r)
 
     # -- assessment cache -------------------------------------------------------------------------------------------
 

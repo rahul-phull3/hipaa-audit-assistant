@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from hipaa_audit.models import Block, Chunk
+from hipaa_audit.models import Block, Chunk, Span
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9(\"'])")
 
@@ -67,16 +67,22 @@ def chunk_blocks(
     """
     chunks: list[Chunk] = []
     parts: list[str] = []
+    origins: list[tuple[int | None, str]] = []  # (page, section) of each part
     body_words = 0  # words that are not overlap
     total_words = 0
     page: int | None = None
     section = ""
     pending_tail = ""
+    pending_origin: tuple[int | None, str] = (None, "")
 
     def flush(*, with_overlap: bool) -> None:
-        nonlocal parts, body_words, total_words, pending_tail
+        nonlocal parts, origins, body_words, total_words, pending_tail, pending_origin
         if parts and body_words > 0:
             text = "\n".join(parts)
+            spans, pos = [], 0
+            for part, (part_page, part_section) in zip(parts, origins, strict=True):
+                spans.append(Span(start=pos, end=pos + len(part), page=part_page, section=part_section))
+                pos += len(part) + 1
             chunks.append(
                 Chunk(
                     id=f"c{len(chunks) + 1:04d}",
@@ -85,10 +91,12 @@ def chunk_blocks(
                     page=page,
                     section=section,
                     n_words=_words(text),
+                    spans=spans,
                 )
             )
             pending_tail = _tail(text, overlap_words) if with_overlap else ""
-        parts, body_words, total_words = [], 0, 0
+            pending_origin = origins[-1]
+        parts, origins, body_words, total_words = [], [], 0, 0
 
     for block in blocks:
         if block.is_heading and body_words >= min_words:
@@ -102,9 +110,11 @@ def chunk_blocks(
                 page, section = block.page, block.section
                 if pending_tail:
                     parts.append(pending_tail)
+                    origins.append(pending_origin)
                     total_words += _words(pending_tail)
                     pending_tail = ""
             parts.append(piece)
+            origins.append((block.page, block.section))
             body_words += n
             total_words += n
     flush(with_overlap=False)

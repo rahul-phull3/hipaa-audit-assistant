@@ -44,6 +44,18 @@ def _contains(haystack: str, segments: list[str]) -> bool:
     return True
 
 
+def _locate(chunk: Chunk, segments: list[str]) -> tuple[int | None, str]:
+    """Page and section of the paragraph a verified quote sits in (a chunk can merge several short sections)."""
+    texts = [normalize(chunk.text[span.start : span.end]) for span in chunk.spans]
+    for span, text in zip(chunk.spans, texts, strict=True):
+        if _contains(text, segments):
+            return span.page, span.section
+    for span, text in zip(chunk.spans, texts, strict=True):  # the quote runs across paragraphs: use where it starts
+        if segments and segments[0] in text:
+            return span.page, span.section
+    return chunk.page, chunk.section
+
+
 def verify_evidence(raw: RawAssessment, chunks: list[Chunk]) -> tuple[list[Evidence], list[str]]:
     """Keep only quotes found verbatim in the excerpts. Returns (verified evidence, flags)."""
     by_id = {c.id: c for c in chunks}
@@ -68,7 +80,8 @@ def verify_evidence(raw: RawAssessment, chunks: list[Chunk]) -> tuple[list[Evide
             continue
         seen.add(key)
         chunk = by_id[chunk_id]
-        accepted.append(Evidence(chunk_id=chunk_id, quote=item.quote.strip(), page=chunk.page, section=chunk.section))
+        page, section = _locate(chunk, segments)
+        accepted.append(Evidence(chunk_id=chunk_id, quote=html.unescape(item.quote).strip(), page=page, section=section))
     return accepted, sorted(flags)
 
 

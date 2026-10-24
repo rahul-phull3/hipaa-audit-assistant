@@ -19,15 +19,25 @@ class Block(BaseModel):
     is_heading: bool = False
 
 
+class Span(BaseModel):
+    """Where one paragraph of a chunk came from. ``start`` and ``end`` are character offsets into ``Chunk.text``."""
+
+    start: int
+    end: int
+    page: int | None = None
+    section: str = ""
+
+
 class Chunk(BaseModel):
     """A passage of the document that can be retrieved and cited."""
 
     id: str  # "c0001"
     ord: int
     text: str
-    page: int | None = None
+    page: int | None = None  # where the chunk starts; a chunk can run on to later pages and sections (see ``spans``)
     section: str = ""
     n_words: int
+    spans: list[Span] = Field(default_factory=list)
 
 
 class Evidence(BaseModel):

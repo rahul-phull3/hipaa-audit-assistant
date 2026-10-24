@@ -90,6 +90,40 @@ def _paragraph(tag: str, n_sentences: int = 5) -> str:
     return " ".join(f"Sentence {i} of {tag} states a requirement for the workforce." for i in range(n_sentences))
 
 
+class ChunkSpanTests(unittest.TestCase):
+    def test_every_paragraph_keeps_its_own_page_and_section(self):
+        blocks = [
+            Block(text="Backups", page=1, section="Policy > Backups", is_heading=True),
+            Block(text="Backups are taken daily and stored off site, and restores are tested twice a year.", page=1, section="Policy > Backups"),
+            Block(text="Passwords", page=2, section="Policy > Passwords", is_heading=True),
+            Block(text="Passwords must be at least twelve characters long and must never be shared with anyone.", page=2, section="Policy > Passwords"),
+        ]
+        (chunk,) = chunk_blocks(blocks, min_words=100)  # short sections are merged into one chunk
+        self.assertEqual((chunk.page, chunk.section), (1, "Policy > Backups"))
+        located = [(s.page, s.section, chunk.text[s.start : s.end]) for s in chunk.spans]
+        self.assertEqual([(p, sec) for p, sec, _ in located], [(1, "Policy > Backups")] * 2 + [(2, "Policy > Passwords")] * 2)
+        self.assertEqual(located[1][2], blocks[1].text)
+        self.assertEqual(located[3][2], blocks[3].text)
+
+    def test_overlap_text_is_attributed_to_where_it_came_from(self):
+        sentence = "The security official reviews access rights every quarter and records the result."
+        long_paragraph = " ".join([sentence] * 30)
+        blocks = [
+            Block(text=long_paragraph, page=3, section="Policy > Access"),
+            Block(text="Visitors sign in and are escorted at all times in secure areas of the building.", page=4, section="Policy > Visitors"),
+        ]
+        chunks = chunk_blocks(blocks, target_words=60, overlap_words=20)
+        self.assertGreater(len(chunks), 2)
+        for chunk in chunks:
+            self.assertEqual(chunk.spans[0].start, 0)
+            self.assertEqual(chunk.spans[-1].end, len(chunk.text))
+            for span in chunk.spans:
+                self.assertTrue(chunk.text[span.start : span.end].strip())
+        # the second chunk starts with overlap taken from page 3 and is still on page 3
+        self.assertEqual(chunks[1].spans[0].page, 3)
+        self.assertEqual(chunks[-1].spans[-1].page, 4)
+
+
 class ChunkingTests(unittest.TestCase):
     def setUp(self):
         self.blocks = [Block(text=_paragraph(f"p{i}"), page=1 + i // 5, section="Policy") for i in range(20)]

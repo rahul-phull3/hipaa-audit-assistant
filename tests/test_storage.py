@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from hipaa_audit.assess.schema import RawAssessment, RawEvidence
-from hipaa_audit.models import Chunk, Evidence, Finding, Usage
+from hipaa_audit.models import Chunk, Evidence, Finding, Span, Usage
 from hipaa_audit.storage import AuditRecord, Repository, SqliteCache, StorageError, new_id
 
 
@@ -31,7 +31,10 @@ def make_record(**overrides) -> AuditRecord:
 
 def make_chunks():
     return [
-        Chunk(id="c0001", ord=0, page=1, section="Backups", text="Backups are taken daily.", n_words=4),
+        Chunk(
+            id="c0001", ord=0, page=1, section="Backups", text="Backups are taken daily.", n_words=4,
+            spans=[Span(start=0, end=24, page=1, section="Backups")],
+        ),
         Chunk(id="c0002", ord=1, page=2, section="", text="Passwords are never shared.", n_words=4),
     ]
 
@@ -75,6 +78,8 @@ class RepositoryTests(unittest.TestCase):
         self.repo.create_audit(record, list(reversed(make_chunks())))
         chunks = self.repo.get_chunks(record.id)
         self.assertEqual([c.id for c in chunks], ["c0001", "c0002"])
+        self.assertEqual(chunks[0].spans, [Span(start=0, end=24, page=1, section="Backups")])
+        self.assertEqual(chunks[1].spans, [])
         self.assertEqual(self.repo.get_chunk(record.id, "c0002").text, "Passwords are never shared.")
         self.assertIsNone(self.repo.get_chunk(record.id, "c9999"))
         self.assertIsNone(self.repo.get_chunk("other", "c0001"))
@@ -158,6 +163,7 @@ class RepositoryTests(unittest.TestCase):
 class CacheTests(unittest.TestCase):
     def test_round_trip_keeps_the_whole_answer(self):
         repo = Repository(":memory:")
+        self.addCleanup(repo.close)
         record = make_record()
         repo.create_audit(record, [])
         raw = RawAssessment(

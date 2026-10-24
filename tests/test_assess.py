@@ -5,7 +5,7 @@ from hipaa_audit.assess.prompts import SYSTEM_PROMPT, build_user_message
 from hipaa_audit.assess.schema import TOOL_NAME, TOOL_SPEC, RawAssessment, RawEvidence
 from hipaa_audit.assess.verify import finalize, normalize, verify_evidence
 from hipaa_audit.catalog import load_catalog
-from hipaa_audit.models import Chunk
+from hipaa_audit.models import Chunk, Span
 
 CHUNKS = [
     Chunk(
@@ -28,6 +28,48 @@ def raw(status, quotes, missing=(), confidence=0.8):
         missing_elements=list(missing),
         confidence=confidence,
     )
+
+
+def merged_chunk() -> Chunk:
+    """Three short paragraphs from different sections merged into one chunk, as the chunker does for small sections."""
+    parts = [
+        ("When a person leaves, their accounts are disabled.", 5, "Policy > Termination"),
+        ("Passwords must never be shared with anyone.", 6, "Policy > Passwords"),
+        ("Sessions end after 15 minutes of inactivity.", 6, "Policy > Automatic logoff"),
+    ]
+    spans, position = [], 0
+    for text, page, section in parts:
+        spans.append(Span(start=position, end=position + len(text), page=page, section=section))
+        position += len(text) + 1
+    return Chunk(
+        id="c0009", ord=8, page=5, section="Policy > Termination", n_words=24, text="\n".join(t for t, _, _ in parts), spans=spans
+    )
+
+
+MERGED = merged_chunk()
+
+
+class CitationTests(unittest.TestCase):
+    def test_quote_is_cited_at_its_own_paragraph(self):
+        r = raw("met", [("c0009", "Passwords must never be shared with anyone."), ("c0009", "Sessions end after 15 minutes of inactivity.")])
+        evidence, flags = verify_evidence(r, [MERGED])
+        self.assertEqual([(e.page, e.section) for e in evidence], [(6, "Policy > Passwords"), (6, "Policy > Automatic logoff")])
+        self.assertEqual(flags, [])
+
+    def test_quote_across_paragraphs_uses_where_it_starts(self):
+        r = raw("met", [("c0009", "their accounts are disabled. ... Passwords must never be shared")])
+        (e,) = verify_evidence(r, [MERGED])[0]
+        self.assertEqual((e.page, e.section), (5, "Policy > Termination"))
+
+    def test_chunk_without_spans_falls_back_to_the_chunk(self):
+        r = raw("met", [("c0001", "Backups of every system that holds ePHI are taken daily.")])
+        (e,) = verify_evidence(r, CHUNKS)[0]
+        self.assertEqual((e.page, e.section), (3, "Backups"))
+
+    def test_escaped_quotes_are_stored_unescaped(self):
+        chunk = Chunk(id="c0001", ord=0, n_words=6, text="Our R&D team reviews all changes before release.")
+        (e,) = verify_evidence(raw("met", [("c0001", "Our R&amp;D team reviews all changes")]), [chunk])[0]
+        self.assertEqual(e.quote, "Our R&D team reviews all changes")
 
 
 class NormalizeTests(unittest.TestCase):
