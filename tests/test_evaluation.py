@@ -254,6 +254,17 @@ class RunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(report["scores"]["macro_f1"], 0.0)
         self.assertEqual(report["flags"]["assessment_failed"], 2)
 
+    async def test_the_reason_each_control_failed_is_kept(self):
+        result = await evaluate(
+            lambda _policy: Down(), seeds=[1], difficulty="easy", control_ids=["data-backup-plan", "automatic-logoff"]
+        )
+        self.assertEqual(
+            result.documents[0].errors,
+            {"data-backup-plan": "the service is down", "automatic-logoff": "the service is down"},
+        )
+        ideal = await evaluate(IdealReader, seeds=[1], difficulty="easy", control_ids=["data-backup-plan"])
+        self.assertEqual(ideal.documents[0].errors, {})
+
     async def test_a_rejected_key_stops_the_evaluation(self):
         with self.assertRaises(LLMAuthError):
             await evaluate(

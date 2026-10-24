@@ -40,6 +40,8 @@ class DocumentScore:
     flags: Counter = field(default_factory=Counter)
     usage: Usage = field(default_factory=Usage)
     seconds: float = 0.0
+    # Why each control that could not be assessed failed (control id -> reason), so a failed run can say what went wrong.
+    errors: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -93,7 +95,9 @@ async def score_document(
 
     predicted = {f.control_id: f.status for f in result.findings}
     pairs = [(policy.truth[c.id].status, predicted[c.id]) for c in controls if c.id in predicted]
-    score = DocumentScore(seed=policy.seed, matrix=confusion(pairs), usage=result.usage, seconds=seconds)
+    score = DocumentScore(
+        seed=policy.seed, matrix=confusion(pairs), usage=result.usage, seconds=seconds, errors=dict(result.errors)
+    )
     for finding in result.findings:
         truth = policy.truth[finding.control_id]
         score.flags.update(finding.flags)

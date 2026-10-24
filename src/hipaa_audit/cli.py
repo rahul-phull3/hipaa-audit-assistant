@@ -1,6 +1,7 @@
 """Command line: audit a file without a server, start the server, evaluate a backend, list the controls, purge old audits.
 
-Exit codes: 0 success, 1 the audit failed, 2 bad input or configuration, 130 interrupted.
+Exit codes: 0 success, 1 the audit failed or an evaluation had assessments that failed, 2 bad input or configuration,
+130 interrupted.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ import asyncio
 import dataclasses
 import json
 import sys
+from collections import Counter
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -151,6 +153,18 @@ async def _eval(args: argparse.Namespace) -> int:
         _say(f"Report written to {args.output}")
     else:
         sys.stdout.write(content)
+    failed = report["scores"]["errors"]
+    if failed:
+        # The report above counts these as misses, so its scores are incomplete. Exiting 0 would let a smoke test pass
+        # after every call was rejected, and the reason would be lost in the log.
+        _say(
+            f"error: {failed} of {report['scores']['total']} assessments failed; the report counts them as misses, "
+            "so its scores are incomplete. Reasons:"
+        )
+        reasons = Counter(reason for document in result.documents for reason in document.errors.values())
+        for reason, count in reasons.most_common(3):
+            _say(f"  {count} x {reason[:300]}")
+        return 1
     return 0
 
 

@@ -8,9 +8,24 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
+from hipaa_audit.assess.llm import HeuristicBackend, LLMUnavailable
 from hipaa_audit.cli import main
 from hipaa_audit.storage import Repository
 from tests.test_service import IDS, policy_text
+
+
+class FailingBackend:
+    """Stands in for a model API that refuses requests: every control fails, or only ``only`` when it is given."""
+
+    name = "anthropic:test"
+
+    def __init__(self, reason, only=None, inner=None):
+        self.reason, self.only, self.inner = reason, only, inner
+
+    async def assess(self, control, excerpts):
+        if self.only is None or control.id == self.only:
+            raise LLMUnavailable(self.reason)
+        return await self.inner.assess(control, excerpts)
 
 
 def run_cli(*argv, env=None):
@@ -144,6 +159,32 @@ class CliTests(unittest.TestCase):
         report = json.loads(target.read_text(encoding="utf-8"))
         self.assertEqual((report["run"]["seeds"], report["run"]["difficulty"]), ([5, 6], "hard"))
         self.assertEqual(report["scores"]["total"], 96)
+
+    def test_eval_exits_with_an_error_and_says_why_when_every_call_fails(self):
+        # The first real run is the first contact with the API. A smoke test that exits 0 after every call was rejected
+        # cannot fail, so the reason has to reach the person even though the report is still written.
+        target = Path(self.dir.name) / "failed.json"
+        reason = (
+            'Anthropic API error: Error code: 400 - {"message": "output_config.effort: Extra inputs are not permitted"}'
+        )
+        with mock.patch("hipaa_audit.cli.make_backend", lambda _settings: FailingBackend(reason)):
+            code, out, err = run_cli(
+                "eval", "--documents", "1", "--controls", ",".join(IDS[:2]), "--format", "json", "-o", str(target), "-q"
+            )
+        self.assertEqual((code, out), (1, ""))
+        self.assertIn("error: 2 of 2 assessments failed", err)
+        self.assertIn(f"2 x {reason}", err)
+        report = json.loads(target.read_text(encoding="utf-8"))  # the report is still written
+        self.assertEqual((report["scores"]["errors"], report["scores"]["total"]), (2, 2))
+
+    def test_eval_exits_with_an_error_when_only_some_calls_fail(self):
+        backend = FailingBackend("Anthropic API error: overloaded", only=IDS[0], inner=HeuristicBackend())
+        with mock.patch("hipaa_audit.cli.make_backend", lambda _settings: backend):
+            code, out, err = run_cli("eval", "--documents", "1", "--controls", ",".join(IDS[:2]))
+        self.assertEqual(code, 1)
+        self.assertIn("error: 1 of 2 assessments failed", err)
+        self.assertIn("1 x Anthropic API error: overloaded", err)
+        self.assertIn("1 controls could not be assessed", out)
 
     def test_eval_refuses_bad_input_and_a_missing_key(self):
         code, _out, err = run_cli("eval", "--backend", "heuristic", "--controls", "nope")

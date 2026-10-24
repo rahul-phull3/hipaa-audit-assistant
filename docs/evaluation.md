@@ -73,7 +73,8 @@ The decoy split shows whether a reviewer is fooled by a line that mentions the t
 
 The evidence figures say whether support was quoted from the right place. The retrieval figures separate two kinds of failure:
 if retrieval did not put the answer in front of the reviewer, no prompt can fix the result. An `error` count above zero means
-calls failed.
+calls failed. The command still writes the report, prints the reasons on stderr (the most common three, with how many
+controls each affected) and exits with status 1, so a smoke test cannot pass after the API rejected every request.
 
 The JSON report has `schema_version`, `run`, `scores`, `confusion`, `spread` (per-document macro F1), `decoys`, `evidence`,
 `retrieval` and `flags` (how often each review flag was raised).
