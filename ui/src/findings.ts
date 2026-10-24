@@ -2,19 +2,21 @@ import type { ControlInfo, Finding, FindingStatus, Safeguard } from "./types";
 
 export const SAFEGUARD_ORDER: Safeguard[] = ["administrative", "physical", "technical", "organizational", "documentation"];
 
+// The long labels are the ones the downloaded report uses (SAFEGUARD_LABELS in src/hipaa_audit/report.py); a Python test keeps
+// the two in step.
 export const SAFEGUARD_LABELS: Record<Safeguard, string> = {
   administrative: "Administrative safeguards",
   physical: "Physical safeguards",
   technical: "Technical safeguards",
-  organizational: "Business associates",
-  documentation: "Policies and documentation",
+  organizational: "Organizational requirements",
+  documentation: "Policies, procedures and documentation",
 };
 
 export const SAFEGUARD_SHORT: Record<Safeguard, string> = {
   administrative: "Administrative",
   physical: "Physical",
   technical: "Technical",
-  organizational: "Business associates",
+  organizational: "Organizational",
   documentation: "Documentation",
 };
 
