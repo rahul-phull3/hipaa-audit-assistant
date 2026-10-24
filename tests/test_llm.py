@@ -17,7 +17,7 @@ from hipaa_audit.assess.schema import TOOL_NAME
 from hipaa_audit.assess.verify import finalize
 from hipaa_audit.catalog import load_catalog
 from hipaa_audit.config import ConfigError, Settings, load_env_file
-from hipaa_audit.models import Chunk
+from hipaa_audit.models import Chunk, Span
 
 
 class FakeSDK(types.ModuleType):
@@ -202,6 +202,50 @@ class HeuristicBackendTests(unittest.IsolatedAsyncioTestCase):
                      "Login attempts, including failed attempts, are monitored and accounts are locked after repeated failures."):
             raw, _ = await HeuristicBackend().assess(control, [self.chunk(text)])
             self.assertGreaterEqual(len(raw.evidence), 1, text)
+
+
+class HeuristicPrecisionTests(unittest.IsolatedAsyncioTestCase):
+    """The offline backend must not call something supported on the strength of a coincidence."""
+
+    async def test_two_shared_keywords_show_the_closest_passage_but_never_support(self):
+        control = load_catalog().get("password-management")
+        criterion = next(c for c in control.criteria if len(c.keywords) >= 5)
+        text = f"Our handbook mentions {criterion.keywords[0]} and also {criterion.keywords[1]} in passing."
+        chunk = Chunk(id="c0001", ord=0, n_words=12, text=text)
+        raw, _ = await HeuristicBackend().assess(control, [chunk])
+        self.assertEqual(raw.status, "gap")
+        self.assertEqual([e.quote for e in raw.evidence], [text])  # shown for a person to look at
+        self.assertIn("do not count as support", raw.rationale)
+        self.assertLess(raw.confidence, 0.5)
+        finding = finalize(control.id, raw, [chunk], model="heuristic")
+        self.assertEqual(finding.status, "gap")  # verification keeps the passage and the status
+
+    async def test_a_strong_match_may_span_two_sentences_of_one_paragraph(self):
+        control = load_catalog().get("password-management")
+        criterion = next(c for c in control.criteria if len(c.keywords) >= 5)
+        k = criterion.keywords
+        paragraph = f"Staff handle {k[0]} and {k[1]}. Reviewers also check {k[2]} each quarter."
+        chunk = Chunk(id="c0001", ord=0, n_words=20, text=f"A heading\n{paragraph}")
+        raw, _ = await HeuristicBackend().assess(control, [chunk])
+        self.assertEqual(raw.evidence[0].quote, paragraph)  # three keywords, split over two sentences, quoted verbatim
+        self.assertEqual(raw.status, "partial")  # the control's other expected element is not shown
+        finding = finalize(control.id, raw, [chunk], model="heuristic")
+        self.assertEqual(finding.evidence[0].quote, paragraph)
+
+    async def test_citations_use_the_paragraph_that_matched(self):
+        control = load_catalog().get("automatic-logoff")
+        parts = [
+            ("When a person leaves, their accounts are disabled.", 5, "Policy > Termination"),
+            ("Sessions are logged off automatically after 15 minutes of inactivity.", 6, "Policy > Automatic logoff"),
+        ]
+        spans, pos = [], 0
+        for text, page, section in parts:
+            spans.append(Span(start=pos, end=pos + len(text), page=page, section=section))
+            pos += len(text) + 1
+        chunk = Chunk(id="c0001", ord=0, n_words=20, page=5, section="Policy > Termination", text="\n".join(t for t, _, _ in parts), spans=spans)
+        raw, _ = await HeuristicBackend().assess(control, [chunk])
+        finding = finalize(control.id, raw, [chunk], model="heuristic")
+        self.assertEqual((finding.evidence[0].page, finding.evidence[0].section), (6, "Policy > Automatic logoff"))
 
 
 class ConfigTests(unittest.TestCase):

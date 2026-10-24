@@ -25,7 +25,7 @@ from hipaa_audit.retrieval.text import tokenize
 
 log = logging.getLogger(__name__)
 
-_SENTENCES = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9(\"'])|\n+")
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9(\"'])|\n+")
 
 
 class LLMError(RuntimeError):
@@ -87,15 +87,15 @@ class AnthropicBackend:
         effort: str | None = "medium",
         client: Any = None,
     ) -> None:
-        try:
-            import anthropic
-        except ImportError as exc:  # pragma: no cover - depends on the environment
-            raise RuntimeError("the anthropic package is not installed (pip install anthropic)") from exc
         if client is None and not api_key:
             raise RuntimeError(
                 "ANTHROPIC_API_KEY is not set. Set it in your environment or .env file, "
                 "or use HIPAA_AUDIT_LLM_BACKEND=heuristic for an offline demo."
             )
+        try:
+            import anthropic
+        except ImportError as exc:  # pragma: no cover - depends on the environment
+            raise RuntimeError("the anthropic package is not installed (pip install anthropic)") from exc
         self._sdk = anthropic
         self.model = model
         self.name = f"anthropic:{model}"
@@ -139,12 +139,17 @@ class AnthropicBackend:
 
 
 class HeuristicBackend:
-    """Keyword matcher. For each expected element it looks for the sentence that contains most of the element's keywords."""
+    """Keyword locator for demos, tests and CI. It is not an AI model and the report says so.
+
+    For each element a control expects it finds the paragraph that contains the most of the element's keywords (matched after
+    stemming). A strong match (at least half of the keywords, never fewer than two) counts as support. A weaker match of two
+    keywords is only shown as the closest passage and never raises a status, because two shared words are often a coincidence.
+    It cannot judge meaning and misses paraphrases that use other words.
+    """
 
     name = "heuristic:keywords"
-
-    def __init__(self, min_fraction: float = 0.5) -> None:
-        self.min_fraction = min_fraction
+    MAX_QUOTE_CHARS = 400
+    WEAK_KEYWORDS = 2
 
     @staticmethod
     def _token_variants(keyword: str) -> list[set[str]]:
@@ -153,36 +158,66 @@ class HeuristicBackend:
             variants.append(set(tokenize(keyword.replace("-", ""))))
         return [v for v in variants if v]
 
-    def _hits(self, criterion: Criterion, sentence: str) -> int:
-        tokens = set(tokenize(sentence))
-        return sum(any(v <= tokens for v in self._token_variants(kw)) for kw in criterion.keywords)
+    def _matched(self, criterion: Criterion, text: str) -> list[str]:
+        tokens = set(tokenize(text))
+        return [kw for kw in criterion.keywords if any(v <= tokens for v in self._token_variants(kw))]
 
-    def _best_sentence(self, criterion: Criterion, excerpts: list[Chunk]) -> tuple[str, str] | None:
-        needed = max(2, math.ceil(len(criterion.keywords) * self.min_fraction))
+    @staticmethod
+    def _paragraphs(chunk: Chunk) -> list[str]:
+        if chunk.spans:
+            return [chunk.text[s.start : s.end] for s in chunk.spans]
+        return [line for line in chunk.text.split("\n") if line.strip()]
+
+    def _quote(self, criterion: Criterion, paragraph: str) -> str:
+        """The shortest run of whole sentences in the paragraph that covers the sentences containing matched keywords."""
+        spans, start = [], 0
+        for m in _SENTENCE_BREAK.finditer(paragraph):
+            spans.append((start, m.start()))
+            start = m.end()
+        spans.append((start, len(paragraph)))
+        hits = [(a, b) for a, b in spans if b > a and self._matched(criterion, paragraph[a:b])]
+        if not hits:
+            return paragraph.strip()
+        quote = paragraph[hits[0][0] : hits[-1][1]].strip()
+        if len(quote) > self.MAX_QUOTE_CHARS:  # fall back to the single sentence with the most matches
+            a, b = max(hits, key=lambda ab: len(self._matched(criterion, paragraph[ab[0] : ab[1]])))
+            quote = paragraph[a:b].strip()
+        return quote
+
+    def _best_passage(self, criterion: Criterion, excerpts: list[Chunk]) -> tuple[bool, str, str] | None:
+        """(is_strong, excerpt id, quote) for the paragraph with the most keyword matches, or None below two matches."""
+        strong_needed = max(self.WEAK_KEYWORDS, math.ceil(len(criterion.keywords) * 0.5))
         best: tuple[int, str, str] | None = None
         for chunk in excerpts:
-            for sentence in _SENTENCES.split(chunk.text):
-                sentence = sentence.strip()
-                if not sentence:
-                    continue
-                hits = self._hits(criterion, sentence)
-                if hits >= needed and (best is None or hits > best[0]):
-                    best = (hits, chunk.id, sentence)
-        return None if best is None else (best[1], best[2])
+            for paragraph in self._paragraphs(chunk):
+                found = len(self._matched(criterion, paragraph))
+                if found >= self.WEAK_KEYWORDS and (best is None or found > best[0]):
+                    best = (found, chunk.id, paragraph)
+        if best is None:
+            return None
+        return best[0] >= strong_needed, best[1], self._quote(criterion, best[2])
 
     async def assess(self, control: Control, excerpts: list[Chunk]) -> tuple[RawAssessment, Usage]:
         evidence: list[RawEvidence] = []
+        closest: list[RawEvidence] = []
         missing: list[str] = []
         for criterion in control.criteria:
-            found = self._best_sentence(criterion, excerpts)
-            if found:
-                evidence.append(RawEvidence(excerpt_id=found[0], quote=found[1]))
+            found = self._best_passage(criterion, excerpts)
+            if found and found[0]:
+                evidence.append(RawEvidence(excerpt_id=found[1], quote=found[2]))
             else:
                 missing.append(criterion.text)
-        n, found_count = len(control.criteria), len(control.criteria) - len(missing)
-        status = "met" if not missing else ("partial" if found_count else "gap")
-        rationale = f"Keyword heuristic (not an AI model): {found_count} of {n} expected elements found."
+                if found:
+                    closest.append(RawEvidence(excerpt_id=found[1], quote=found[2]))
+        n = len(control.criteria)
+        supported = n - len(missing)
+        status = "met" if not missing else ("partial" if supported else "gap")
+        rationale = f"Keyword heuristic (not an AI model): {supported} of {n} expected elements found."
+        if status == "gap" and closest:
+            evidence = closest[:2]
+            rationale += " Only weak keyword matches exist; the closest passages are shown for review but do not count as support."
+        confidence = 0.5 if status != "gap" else 0.3
         return (
-            RawAssessment(status=status, rationale=rationale, evidence=evidence, missing_elements=missing, confidence=0.5),
+            RawAssessment(status=status, rationale=rationale, evidence=evidence, missing_elements=missing, confidence=confidence),
             Usage(),
         )

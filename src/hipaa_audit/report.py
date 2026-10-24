@@ -219,6 +219,8 @@ def render_markdown(report: dict[str, Any]) -> str:
             lines += [" · ".join(meta), ""]
             if f["rationale"]:
                 lines += [_md(f["rationale"]), ""]
+            if f["status"] == "gap" and f["evidence"]:
+                lines += ["Closest passages in the document (these do not count as support):", ""]
             for e in f["evidence"]:
                 lines.append(f"> “{_md(e['quote'])}”{_where(e['page'], e['section'])}")
                 lines.append("")
