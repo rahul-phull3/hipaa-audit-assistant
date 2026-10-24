@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+
+# Local config and data (never commit keys or uploaded documents)
+.env
+.env.*
+!.env.example
+/data/
+*.sqlite3
+*.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
