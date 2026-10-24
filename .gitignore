@@ -26,3 +26,9 @@ frontend/dist/
 .idea/
 .vscode/
 .DS_Store
+
+# UI build output and local tooling
+ui/node_modules
+ui/dist/
+ui/.test-build/
+ui/e2e/out/
