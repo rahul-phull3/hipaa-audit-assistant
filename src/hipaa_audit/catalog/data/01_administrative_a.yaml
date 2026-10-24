@@ -1,0 +1,314 @@
+- id: risk-analysis
+  citation: "45 CFR 164.308(a)(1)(ii)(A)"
+  title: Risk analysis
+  safeguard: administrative
+  standard: Security management process
+  requirement: required
+  expectation: "The policy requires an accurate and thorough assessment of the risks and vulnerabilities to the confidentiality, integrity and availability of ePHI."
+  criteria:
+    - id: scope
+      text: "Requires a documented risk analysis that covers every system, location and medium that holds or transmits ePHI."
+      keywords: [risk analysis, risk assessment, ephi, systems, vulnerabilities]
+      synth: ["The organization performs a documented risk analysis of every system, location and medium that creates, stores or transmits ePHI, covering threats and vulnerabilities."]
+    - id: cadence
+      text: "Says how often the risk analysis is repeated and which events (new systems, incidents, major changes) trigger an update."
+      keywords: [annually, periodic, update, change, incident]
+      synth: ["The risk analysis is repeated at least annually and updated whenever a major system change or security incident occurs."]
+  queries:
+    - "risk analysis of threats and vulnerabilities to ePHI"
+    - "risk assessment frequency and triggers for updating it"
+    - "inventory of systems and locations that hold electronic protected health information"
+
+- id: risk-management
+  citation: "45 CFR 164.308(a)(1)(ii)(B)"
+  title: Risk management
+  safeguard: administrative
+  standard: Security management process
+  requirement: required
+  expectation: "The policy requires security measures that reduce identified risks to a reasonable and appropriate level."
+  criteria:
+    - id: treatment
+      text: "Requires identified risks to be prioritised and treated with documented security measures."
+      keywords: [risk management, mitigate, remediation, risk register, prioritize]
+      synth: ["Risks found in the risk analysis are prioritized, recorded in a risk register and mitigated with documented security measures."]
+    - id: tracking
+      text: "Assigns ownership of risk treatment actions and tracks them until closed."
+      keywords: [owner, track, plan, remediation, due date]
+      synth: ["Each remediation action has an owner and a due date and is tracked until it is closed."]
+  queries:
+    - "risk management plan to reduce identified risks"
+    - "remediation of risks with owners and due dates"
+    - "risk register and prioritization of security measures"
+
+- id: sanction-policy
+  citation: "45 CFR 164.308(a)(1)(ii)(C)"
+  title: Sanction policy
+  safeguard: administrative
+  standard: Security management process
+  requirement: required
+  expectation: "Workforce members who fail to comply with the security policies face documented sanctions."
+  criteria:
+    - id: sanctions
+      text: "States that violations of security policies lead to sanctions that reflect the severity of the violation."
+      keywords: [sanction, disciplinary, violation, termination, severity]
+      synth: ["Violations of security policies result in disciplinary sanctions, up to and including termination, according to the severity of the violation."]
+    - id: awareness
+      text: "Makes workforce members aware of the sanctions, for example through training or a signed acknowledgment."
+      keywords: [acknowledge, aware, trained, workforce, signed]
+      synth: ["All workforce members are informed of these sanctions during training and sign an acknowledgment."]
+  queries:
+    - "disciplinary sanctions for security policy violations"
+    - "consequences for workforce members who do not comply"
+    - "acknowledgment of sanctions by employees"
+
+- id: information-system-activity-review
+  citation: "45 CFR 164.308(a)(1)(ii)(D)"
+  title: Information system activity review
+  safeguard: administrative
+  standard: Security management process
+  requirement: required
+  expectation: "The policy requires regular review of system activity records such as audit logs, access reports and security incident tracking reports."
+  criteria:
+    - id: review
+      text: "Requires regular review of audit logs, access reports and security incident tracking reports."
+      keywords: [review, audit logs, access reports, security incident, regularly]
+      synth: ["Audit logs, access reports and security incident tracking reports are reviewed regularly for signs of misuse."]
+    - id: responsibility
+      text: "Names who performs the review, how often, and what happens when anomalies are found."
+      keywords: [responsible, weekly, monthly, anomalies, escalate]
+      synth: ["The security team performs the review weekly and escalates anomalies to the security official."]
+  queries:
+    - "review of audit logs and system activity"
+    - "access reports and security incident tracking reviewed regularly"
+    - "who reviews logs and how anomalies are escalated"
+
+- id: assigned-security-responsibility
+  citation: "45 CFR 164.308(a)(2)"
+  title: Assigned security responsibility
+  safeguard: administrative
+  standard: Assigned security responsibility
+  requirement: required
+  expectation: "One individual is identified as responsible for developing and implementing the security policies and procedures."
+  criteria:
+    - id: official
+      text: "Designates a named person or role as the security official."
+      keywords: [security official, security officer, designated, responsible, ciso]
+      synth: ["The Chief Information Security Officer is designated as the security official of the organization."]
+    - id: authority
+      text: "Describes the security official's responsibilities and authority across the organization."
+      keywords: [responsibilities, authority, develop, implement, oversee]
+      synth: ["The security official develops, implements and oversees the security policies and has authority over all systems that handle ePHI."]
+  queries:
+    - "designated security official responsible for security policies"
+    - "security officer roles and responsibilities"
+    - "who is accountable for developing and implementing security procedures"
+
+- id: workforce-authorization-supervision
+  citation: "45 CFR 164.308(a)(3)(ii)(A)"
+  title: Authorization and supervision
+  safeguard: administrative
+  standard: Workforce security
+  requirement: addressable
+  expectation: "Procedures authorize and supervise workforce members who work with ePHI or in places where it might be accessed."
+  criteria:
+    - id: authorization
+      text: "Requires authorization before a workforce member works with ePHI."
+      keywords: [authorize, authorization, approval, workforce, ephi]
+      synth: ["Workforce members must be authorized by their manager and the security official before they work with ePHI."]
+    - id: supervision
+      text: "Describes supervision of people who work with ePHI or in locations where it may be accessed, including contractors and visitors."
+      keywords: [supervise, supervision, escort, contractors, visitors]
+      synth: ["Contractors and visitors are supervised and escorted whenever they are in areas where ePHI could be accessed."]
+  queries:
+    - "authorization of workforce members to access ePHI"
+    - "supervision of staff, contractors and visitors near ePHI"
+    - "approval before working with patient data"
+
+- id: workforce-clearance
+  citation: "45 CFR 164.308(a)(3)(ii)(B)"
+  title: Workforce clearance procedure
+  safeguard: administrative
+  standard: Workforce security
+  requirement: addressable
+  expectation: "Procedures determine that a workforce member's access to ePHI is appropriate."
+  criteria:
+    - id: screening
+      text: "Requires background checks or equivalent clearance before access to ePHI is granted."
+      keywords: [background check, screening, clearance, pre-employment, verification]
+      synth: ["Candidates complete a background check and screening before they are cleared for access to ePHI."]
+    - id: appropriateness
+      text: "Ties the level of access to the person's role and the clearance outcome."
+      keywords: [role, appropriate, level of access, job function, clearance]
+      synth: ["The level of access granted is appropriate to the person's job function and the outcome of clearance."]
+  queries:
+    - "background checks and screening before access to ePHI"
+    - "clearance procedure for new workforce members"
+    - "access appropriate to job function"
+
+- id: termination-procedures
+  citation: "45 CFR 164.308(a)(3)(ii)(C)"
+  title: Termination procedures
+  safeguard: administrative
+  standard: Workforce security
+  requirement: addressable
+  expectation: "Procedures end access to ePHI when employment or an engagement ends, or when a clearance condition is no longer met."
+  criteria:
+    - id: revoke
+      text: "Requires access to be removed promptly when employment or an engagement ends or the role changes."
+      keywords: [terminate, termination, revoke, disable, promptly, offboarding]
+      synth: ["When employment ends or a role changes, system access is disabled promptly through the offboarding checklist."]
+    - id: assets
+      text: "Covers return of devices, badges and keys and removal of accounts."
+      keywords: [return, badge, keys, equipment, accounts]
+      synth: ["Departing staff return equipment, badges and keys, and their accounts are removed."]
+  queries:
+    - "revoking access when employment ends"
+    - "offboarding checklist for departing employees and contractors"
+    - "return of devices, badges and keys at termination"
+
+- id: access-authorization
+  citation: "45 CFR 164.308(a)(4)(ii)(B)"
+  title: Access authorization
+  safeguard: administrative
+  standard: Information access management
+  requirement: addressable
+  expectation: "Policies for granting access to ePHI, for example through a workstation, transaction, program or process."
+  criteria:
+    - id: granting
+      text: "Describes who approves access to ePHI systems and on what basis."
+      keywords: [approve, approval, access request, granted, manager]
+      synth: ["Access to systems containing ePHI is granted only after a documented access request is approved by the data owner."]
+    - id: least-privilege
+      text: "Limits access to the minimum needed for the person's role."
+      keywords: [least privilege, minimum necessary, role-based, need to know, role]
+      synth: ["Access follows the principle of least privilege and is limited to the minimum necessary for each role."]
+  queries:
+    - "approval process for granting access to ePHI systems"
+    - "least privilege and role-based access"
+    - "access request and data owner approval"
+
+- id: access-establishment-modification
+  citation: "45 CFR 164.308(a)(4)(ii)(C)"
+  title: Access establishment and modification
+  safeguard: administrative
+  standard: Information access management
+  requirement: addressable
+  expectation: "Policies establish, document, review and modify a user's right of access to a workstation, transaction, program or process."
+  criteria:
+    - id: provisioning
+      text: "Documents how user access is created and changed."
+      keywords: [provision, create, modify, change, documented]
+      synth: ["User accounts are provisioned, modified and removed through a documented change process."]
+    - id: review
+      text: "Requires periodic review of user access rights."
+      keywords: [review, periodic, recertification, quarterly, access rights]
+      synth: ["User access rights are reviewed quarterly and recertified by the data owner."]
+  queries:
+    - "provisioning and modification of user access rights"
+    - "periodic review or recertification of user access"
+    - "documented process for changing access"
+
+- id: security-awareness-training
+  citation: "45 CFR 164.308(a)(5)(i)"
+  title: Security awareness and training
+  safeguard: administrative
+  standard: Security awareness and training
+  requirement: required
+  expectation: "A security awareness and training program exists for all workforce members, including management."
+  criteria:
+    - id: program
+      text: "Requires security awareness training for every workforce member, including management."
+      keywords: [training, awareness, all workforce, management, new hire]
+      synth: ["All workforce members, including management, complete security awareness training when they are hired."]
+    - id: frequency
+      text: "States when training happens (at hire and periodically) and how completion is recorded."
+      keywords: [annual, onboarding, completion, records, periodic]
+      synth: ["Training is repeated annually and completion is recorded in the training records."]
+  queries:
+    - "security awareness training for all workforce members"
+    - "annual training and onboarding training records"
+    - "training program for management and staff"
+
+- id: security-reminders
+  citation: "45 CFR 164.308(a)(5)(ii)(A)"
+  title: Security reminders
+  safeguard: administrative
+  standard: Security awareness and training
+  requirement: addressable
+  expectation: "The workforce receives periodic security updates or reminders."
+  criteria:
+    - id: reminders
+      text: "Provides ongoing reminders or updates between formal trainings."
+      keywords: [reminder, bulletin, newsletter, updates, phishing]
+      synth: ["Security reminders and phishing alerts are sent to the workforce between formal training sessions."]
+    - id: channel
+      text: "Says how often reminders are sent and through which channel."
+      keywords: [monthly, quarterly, email, intranet, channel]
+      synth: ["Reminders are issued monthly by email and posted on the intranet."]
+  queries:
+    - "periodic security reminders to staff"
+    - "security bulletins and newsletters"
+    - "phishing alerts sent to employees"
+
+- id: malicious-software-protection
+  citation: "45 CFR 164.308(a)(5)(ii)(B)"
+  title: Protection from malicious software
+  safeguard: administrative
+  standard: Security awareness and training
+  requirement: addressable
+  expectation: "Procedures guard against, detect and report malicious software."
+  criteria:
+    - id: controls
+      text: "Requires anti-malware or equivalent protection on systems that handle ePHI, kept up to date."
+      keywords: [anti-malware, antivirus, endpoint protection, updated, patch]
+      synth: ["Endpoint protection software is installed on every system that handles ePHI and is kept up to date with current patches."]
+    - id: reporting
+      text: "Requires workforce members to report suspected malware and describes the response."
+      keywords: [report, suspected, malware, ransomware, response]
+      synth: ["Workforce members must immediately report suspected malware or ransomware to the help desk, which starts the response procedure."]
+  queries:
+    - "anti-malware and antivirus protection on systems with ePHI"
+    - "reporting suspected malware or ransomware"
+    - "patching and endpoint protection"
+
+- id: login-monitoring
+  citation: "45 CFR 164.308(a)(5)(ii)(C)"
+  title: Log-in monitoring
+  safeguard: administrative
+  standard: Security awareness and training
+  requirement: addressable
+  expectation: "Procedures monitor log-in attempts and report discrepancies."
+  criteria:
+    - id: monitoring
+      text: "Requires monitoring of log-in attempts, including failed attempts."
+      keywords: [log-in, login, failed attempts, monitor, lockout]
+      synth: ["Log-in attempts, including failed attempts, are monitored and accounts are locked after repeated failures."]
+    - id: reporting
+      text: "Requires discrepancies or suspicious log-in activity to be reported and investigated."
+      keywords: [report, suspicious, investigate, alert, discrepancies]
+      synth: ["Suspicious log-in activity generates an alert and is reported and investigated by the security team."]
+  queries:
+    - "monitoring of failed login attempts"
+    - "account lockout after repeated failures"
+    - "reporting suspicious log-in activity"
+
+- id: password-management
+  citation: "45 CFR 164.308(a)(5)(ii)(D)"
+  title: Password management
+  safeguard: administrative
+  standard: Security awareness and training
+  requirement: addressable
+  expectation: "Procedures cover creating, changing and safeguarding passwords."
+  criteria:
+    - id: creation
+      text: "Sets rules for creating passwords or passphrases and for changing them."
+      keywords: [password, passphrase, complexity, length, change]
+      synth: ["Passwords must meet minimum length and complexity rules and are changed when compromise is suspected."]
+    - id: safeguarding
+      text: "Prohibits sharing passwords and requires storing them securely, for example in a password manager."
+      keywords: [share, sharing, store, password manager, multi-factor]
+      synth: ["Passwords must never be shared and may only be stored in the approved password manager."]
+  queries:
+    - "password creation and complexity requirements"
+    - "prohibition on sharing passwords"
+    - "password manager and multi-factor authentication"

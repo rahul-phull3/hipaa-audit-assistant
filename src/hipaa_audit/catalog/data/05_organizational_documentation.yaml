@@ -1,0 +1,108 @@
+- id: business-associate-contract-terms
+  citation: "45 CFR 164.314(a)(2)(i)"
+  title: Business associate contract terms
+  safeguard: organizational
+  standard: Business associate contracts or other arrangements
+  requirement: required
+  expectation: "Contracts with business associates require them to implement safeguards for ePHI, to ensure that subcontractors do the same, and to report security incidents including breaches of unsecured PHI."
+  criteria:
+    - id: safeguards
+      text: "Requires the business associate to implement administrative, physical and technical safeguards for ePHI."
+      keywords: [business associate, safeguards, security rule, administrative, technical]
+      synth: ["Business associate agreements require the business associate to implement administrative, physical and technical safeguards for ePHI in line with the Security Rule."]
+    - id: subcontractors
+      text: "Requires the business associate to make sure its subcontractors agree to the same protections."
+      keywords: [subcontractor, agent, same restrictions, flow down, agree]
+      synth: ["The business associate must ensure that any subcontractor that handles ePHI agrees to the same restrictions and safeguards."]
+    - id: reporting
+      text: "Requires the business associate to report security incidents and breaches of unsecured PHI."
+      keywords: [report, security incident, breach, unsecured, notify]
+      synth: ["The business associate must report any security incident and any breach of unsecured PHI to the organization."]
+  queries:
+    - "business associate agreement requirements for safeguarding ePHI"
+    - "subcontractors of business associates"
+    - "business associate reporting of security incidents and breaches"
+
+- id: policies-and-procedures
+  citation: "45 CFR 164.316(a)"
+  title: Policies and procedures
+  safeguard: documentation
+  standard: Policies and procedures
+  requirement: required
+  expectation: "Reasonable and appropriate written policies and procedures are implemented to comply with the Security Rule."
+  criteria:
+    - id: written
+      text: "Has written security policies and procedures designed to comply with the Security Rule."
+      keywords: [policies and procedures, written, comply, security rule, approved]
+      synth: ["The organization maintains written security policies and procedures that are designed to comply with the Security Rule."]
+    - id: ownership
+      text: "Shows approval, an owner and version or effective date."
+      keywords: [owner, approved by, version, effective date, review]
+      synth: ["Each policy has an owner, is approved by management, and carries a version number and effective date."]
+  queries:
+    - "written security policies and procedures"
+    - "policy approval, ownership and version"
+    - "compliance with the Security Rule"
+
+- id: documentation-retention
+  citation: "45 CFR 164.316(b)(2)(i)"
+  title: Documentation time limit
+  safeguard: documentation
+  standard: Documentation
+  requirement: required
+  expectation: "Required documentation is retained for six years from the date it was created or last in effect, whichever is later."
+  criteria:
+    - id: six-years
+      text: "States that security documentation is retained for six years from creation or from when it was last in effect."
+      keywords: [six years, 6 years, retain, retention, last in effect]
+      synth: ["Security policies, procedures and related records are retained for six years from the date of creation or the date they were last in effect, whichever is later."]
+    - id: coverage
+      text: "Covers policies, procedures and records of actions, activities and assessments."
+      keywords: [policies, procedures, actions, activities, assessments]
+      synth: ["Retention applies to policies, procedures and records of required actions, activities and assessments."]
+  queries:
+    - "retention period of six years for documentation"
+    - "retaining policies and records"
+    - "records of actions, activities and assessments"
+
+- id: documentation-availability
+  citation: "45 CFR 164.316(b)(2)(ii)"
+  title: Documentation availability
+  safeguard: documentation
+  standard: Documentation
+  requirement: required
+  expectation: "Documentation is available to the people responsible for implementing the procedures."
+  criteria:
+    - id: availability
+      text: "Makes policies and procedures available to the people who implement them."
+      keywords: [available, accessible, intranet, responsible, workforce]
+      synth: ["Policies and procedures are available to the workforce members responsible for implementing them through the intranet."]
+    - id: distribution
+      text: "Says where current versions are kept and how people are told about changes."
+      keywords: [repository, portal, shared drive, distribution, version]
+      synth: ["The current version of each document is kept in the policy portal, and staff are notified when it changes."]
+  queries:
+    - "availability of policies to responsible staff"
+    - "policy portal or intranet"
+    - "notifying staff of policy changes"
+
+- id: documentation-updates
+  citation: "45 CFR 164.316(b)(2)(iii)"
+  title: Documentation updates
+  safeguard: documentation
+  standard: Documentation
+  requirement: required
+  expectation: "Documentation is reviewed periodically and updated in response to environmental or operational changes affecting the security of ePHI."
+  criteria:
+    - id: periodic-review
+      text: "Requires periodic review and update of security documentation."
+      keywords: [review, annually, periodic, update, revise]
+      synth: ["Security policies and procedures are reviewed at least annually and updated as needed."]
+    - id: triggers
+      text: "Names changes that trigger an update, such as new regulation, system changes or incidents."
+      keywords: [change, regulatory, operational, environmental, after incident]
+      synth: ["Documentation is updated when environmental or operational changes, new regulation or an incident affect the security of ePHI."]
+  queries:
+    - "periodic review and update of policies"
+    - "updating documentation after operational changes"
+    - "triggers for policy revision"

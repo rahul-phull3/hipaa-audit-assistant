@@ -1,0 +1,171 @@
+- id: incident-response-and-reporting
+  citation: "45 CFR 164.308(a)(6)(ii)"
+  title: Response and reporting of security incidents
+  safeguard: administrative
+  standard: Security incident procedures
+  requirement: required
+  expectation: "The policy identifies and responds to suspected or known security incidents, mitigates harmful effects where practicable, and documents incidents and their outcomes."
+  criteria:
+    - id: identify
+      text: "Defines what a security incident is and requires it to be reported internally without delay."
+      keywords: [security incident, report, define, immediately, hotline]
+      synth: ["A security incident is any suspected or known event that threatens ePHI, and every workforce member must report one immediately to the security team."]
+    - id: respond
+      text: "Describes the response steps: containment, mitigation, investigation and escalation."
+      keywords: [contain, mitigate, investigate, escalate, response plan]
+      synth: ["The incident response plan covers containment, mitigation of harmful effects, investigation and escalation to management."]
+    - id: document
+      text: "Requires incidents and their outcomes to be documented."
+      keywords: [document, incident log, outcome, lessons learned, record]
+      synth: ["Each incident and its outcome is recorded in the incident log and reviewed for lessons learned."]
+  queries:
+    - "security incident definition and reporting"
+    - "incident response plan containment mitigation investigation"
+    - "documentation of incidents and outcomes"
+
+- id: data-backup-plan
+  citation: "45 CFR 164.308(a)(7)(ii)(A)"
+  title: Data backup plan
+  safeguard: administrative
+  standard: Contingency plan
+  requirement: required
+  expectation: "The policy creates and maintains retrievable exact copies of ePHI."
+  criteria:
+    - id: backups
+      text: "Requires regular backups of the systems and data that hold ePHI."
+      keywords: [backup, backups, daily, copies, ephi]
+      synth: ["Systems and databases that hold ePHI are backed up daily and exact copies are retained."]
+    - id: protection
+      text: "Requires backups to be protected (encrypted, stored separately) and restorable."
+      keywords: [encrypted, offsite, off-site, restore, retention]
+      synth: ["Backups are encrypted, stored off-site and tested regularly to confirm that data can be restored."]
+  queries:
+    - "backup of systems containing ePHI"
+    - "encrypted off-site backups and restoration"
+    - "backup frequency and retention"
+
+- id: disaster-recovery-plan
+  citation: "45 CFR 164.308(a)(7)(ii)(B)"
+  title: Disaster recovery plan
+  safeguard: administrative
+  standard: Contingency plan
+  requirement: required
+  expectation: "Procedures exist to restore any loss of data."
+  criteria:
+    - id: plan
+      text: "Has a documented disaster recovery plan to restore lost ePHI and critical systems."
+      keywords: [disaster recovery, restore, recovery plan, loss of data, critical systems]
+      synth: ["A documented disaster recovery plan describes how lost ePHI and critical systems are restored after an outage or loss of data."]
+    - id: objectives
+      text: "Sets recovery time and recovery point objectives or equivalent priorities."
+      keywords: [rto, rpo, recovery time, recovery point, priority]
+      synth: ["Recovery time objectives and recovery point objectives are defined for each critical system."]
+  queries:
+    - "disaster recovery plan to restore data"
+    - "recovery time objective and recovery point objective"
+    - "restoring critical systems after an outage"
+
+- id: emergency-mode-operation-plan
+  citation: "45 CFR 164.308(a)(7)(ii)(C)"
+  title: Emergency mode operation plan
+  safeguard: administrative
+  standard: Contingency plan
+  requirement: required
+  expectation: "Procedures let critical business processes continue while protecting the security of ePHI during an emergency."
+  criteria:
+    - id: continuity
+      text: "Describes how critical processes continue during an emergency while ePHI stays protected."
+      keywords: [emergency mode, continuity, critical processes, downtime, emergency]
+      synth: ["The emergency mode operation plan keeps critical processes running during downtime while ePHI remains protected."]
+    - id: safeguards
+      text: "States which security protections stay in force during emergency operations."
+      keywords: [remain, maintain, security controls, access, manual procedures]
+      synth: ["Access controls and other security controls remain in force during emergency operations, using manual procedures where systems are unavailable."]
+  queries:
+    - "emergency mode operation and business continuity"
+    - "protecting ePHI during emergency operations"
+    - "manual procedures during system downtime"
+
+- id: contingency-testing-revision
+  citation: "45 CFR 164.308(a)(7)(ii)(D)"
+  title: Testing and revision of contingency plans
+  safeguard: administrative
+  standard: Contingency plan
+  requirement: addressable
+  expectation: "Contingency plans are tested and revised periodically."
+  criteria:
+    - id: testing
+      text: "Requires contingency, backup-restore and disaster recovery plans to be tested on a schedule."
+      keywords: [test, tested, tabletop, exercise, drill]
+      synth: ["Contingency and disaster recovery plans are tested at least annually through tabletop exercises and restore drills."]
+    - id: revision
+      text: "Requires plans to be revised based on test results or changes."
+      keywords: [revise, update, lessons, after action, review]
+      synth: ["Plans are revised after each test and whenever systems change, based on lessons learned."]
+  queries:
+    - "testing of contingency and disaster recovery plans"
+    - "tabletop exercises and restore drills"
+    - "revision of plans after tests"
+
+- id: criticality-analysis
+  citation: "45 CFR 164.308(a)(7)(ii)(E)"
+  title: Applications and data criticality analysis
+  safeguard: administrative
+  standard: Contingency plan
+  requirement: addressable
+  expectation: "The relative criticality of applications and data is assessed in support of the other contingency plan components."
+  criteria:
+    - id: ranking
+      text: "Ranks applications and data by how critical they are to operations and patient care."
+      keywords: [criticality, critical, priority, tier, business impact]
+      synth: ["Applications and data are ranked by criticality to operations and patient care in a business impact analysis."]
+    - id: use
+      text: "Uses the ranking to decide recovery order and contingency priorities."
+      keywords: [recovery order, prioritize, restore first, dependencies, contingency]
+      synth: ["The criticality ranking determines the recovery order, so the most critical applications are restored first."]
+  queries:
+    - "criticality analysis of applications and data"
+    - "business impact analysis and recovery priorities"
+    - "which systems are restored first"
+
+- id: periodic-evaluation
+  citation: "45 CFR 164.308(a)(8)"
+  title: Evaluation
+  safeguard: administrative
+  standard: Evaluation
+  requirement: required
+  expectation: "The policy requires periodic technical and non-technical evaluation of whether the security policies and procedures meet the Security Rule, and again after environmental or operational changes."
+  criteria:
+    - id: evaluation
+      text: "Requires periodic technical and non-technical evaluation of the safeguards against the Security Rule."
+      keywords: [evaluation, audit, assessment, periodic, compliance]
+      synth: ["The organization performs periodic technical and non-technical evaluations of its safeguards against the Security Rule."]
+    - id: triggers
+      text: "States that evaluation is repeated after significant environmental or operational changes."
+      keywords: [change, new system, after, reevaluate, reassess]
+      synth: ["Evaluations are repeated after significant environmental or operational changes, such as new systems or a move to new premises."]
+  queries:
+    - "periodic technical and non-technical evaluation of security"
+    - "compliance audit against the Security Rule"
+    - "re-evaluation after operational changes"
+
+- id: business-associate-arrangements
+  citation: "45 CFR 164.308(b)(1)"
+  title: Business associate contracts and other arrangements
+  safeguard: administrative
+  standard: Business associate contracts and other arrangements
+  requirement: required
+  expectation: "A business associate may handle ePHI only after satisfactory assurances are obtained, documented in a written contract or other arrangement."
+  criteria:
+    - id: assurances
+      text: "Requires satisfactory assurances, in a written agreement, before a business associate handles ePHI."
+      keywords: [business associate, baa, written agreement, assurances, vendor]
+      synth: ["A signed business associate agreement providing satisfactory assurances is required before any vendor handles ePHI."]
+    - id: inventory
+      text: "Keeps track of which vendors or business associates handle ePHI."
+      keywords: [inventory, list, vendor, review, third party]
+      synth: ["The organization maintains an inventory of vendors that handle ePHI and reviews it annually."]
+  queries:
+    - "business associate agreement before sharing ePHI"
+    - "vendor management and third-party review"
+    - "inventory of business associates"

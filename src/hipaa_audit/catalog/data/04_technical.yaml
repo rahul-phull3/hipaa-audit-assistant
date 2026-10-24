@@ -1,0 +1,209 @@
+- id: unique-user-identification
+  citation: "45 CFR 164.312(a)(2)(i)"
+  title: Unique user identification
+  safeguard: technical
+  standard: Access control
+  requirement: required
+  expectation: "Each user is assigned a unique name or number so that identity can be tracked."
+  criteria:
+    - id: unique-ids
+      text: "Requires a unique identifier for each user and prohibits shared accounts."
+      keywords: [unique user id, unique identifier, individual account, shared accounts, username]
+      synth: ["Every user is assigned a unique user ID, and shared or generic accounts are not permitted on systems that hold ePHI."]
+    - id: tracking
+      text: "Makes activity attributable to an individual user."
+      keywords: [tracked, attributable, audit, user identity, accountability]
+      synth: ["Activity in systems is tracked to the individual user ID so that every action is attributable."]
+  queries:
+    - "unique user identification and no shared accounts"
+    - "tracking user activity to an individual"
+    - "individual user IDs for systems with ePHI"
+
+- id: emergency-access-procedure
+  citation: "45 CFR 164.312(a)(2)(ii)"
+  title: Emergency access procedure
+  safeguard: technical
+  standard: Access control
+  requirement: required
+  expectation: "Procedures exist for obtaining necessary ePHI during an emergency."
+  criteria:
+    - id: break-glass
+      text: "Describes how authorized staff can obtain ePHI in an emergency, for example through a break-glass procedure."
+      keywords: [emergency access, break glass, break-glass, override, emergency]
+      synth: ["In an emergency, authorized clinicians can obtain ePHI through a break-glass procedure that overrides normal access limits."]
+    - id: review
+      text: "Requires emergency access to be logged and reviewed afterwards."
+      keywords: [review, log, after the fact, audit, approved]
+      synth: ["Every emergency access is logged and reviewed by the security team after the event."]
+  queries:
+    - "emergency access to ePHI break-glass"
+    - "obtaining patient data during an emergency"
+    - "review of emergency access afterwards"
+
+- id: automatic-logoff
+  citation: "45 CFR 164.312(a)(2)(iii)"
+  title: Automatic logoff
+  safeguard: technical
+  standard: Access control
+  requirement: addressable
+  expectation: "Electronic sessions end after a predetermined period of inactivity."
+  criteria:
+    - id: timeout
+      text: "Sets an inactivity period after which sessions are ended or locked."
+      keywords: [automatic logoff, inactivity, timeout, minutes, session]
+      synth: ["Sessions on systems with ePHI are automatically logged off after 15 minutes of inactivity."]
+    - id: reauthentication
+      text: "Requires users to authenticate again to continue."
+      keywords: [re-authenticate, reauthenticate, password, lock, resume]
+      synth: ["Users must authenticate again to resume a session after it has timed out."]
+  queries:
+    - "automatic logoff after inactivity"
+    - "session timeout minutes"
+    - "re-authentication to resume a session"
+
+- id: encryption-at-rest
+  citation: "45 CFR 164.312(a)(2)(iv)"
+  title: Encryption and decryption
+  safeguard: technical
+  standard: Access control
+  requirement: addressable
+  expectation: "A mechanism encrypts and decrypts ePHI."
+  criteria:
+    - id: at-rest
+      text: "Requires ePHI to be encrypted at rest on servers, databases, laptops and removable media."
+      keywords: [encrypt, encryption, at rest, aes, database]
+      synth: ["ePHI is encrypted at rest using AES-256 on servers, databases, laptops and removable media."]
+    - id: keys
+      text: "Addresses management and protection of encryption keys."
+      keywords: [key management, keys, rotation, kms, hsm]
+      synth: ["Encryption keys are managed in a key management service, rotated regularly and accessible only to authorized administrators."]
+  queries:
+    - "encryption of ePHI at rest"
+    - "encryption key management"
+    - "disk and database encryption"
+
+- id: audit-controls
+  citation: "45 CFR 164.312(b)"
+  title: Audit controls
+  safeguard: technical
+  standard: Audit controls
+  requirement: required
+  expectation: "Hardware, software and procedural mechanisms record and examine activity in systems that contain or use ePHI."
+  criteria:
+    - id: logging
+      text: "Requires systems that contain or use ePHI to record activity, including access to ePHI."
+      keywords: [audit log, logging, record activity, access to ephi, system logs]
+      synth: ["Systems that contain or use ePHI record audit logs of user activity, including every access to ePHI."]
+    - id: examination
+      text: "Requires logs to be examined, retained and protected from tampering."
+      keywords: [review, retain, retention, protect logs, siem]
+      synth: ["Audit logs are collected in a central SIEM, protected from alteration, reviewed and retained for six years."]
+  queries:
+    - "audit logging of access to ePHI"
+    - "log review, retention and protection"
+    - "recording and examining system activity"
+
+- id: integrity-protection
+  citation: "45 CFR 164.312(c)(1)"
+  title: Integrity
+  safeguard: technical
+  standard: Integrity
+  requirement: required
+  expectation: "Policies and procedures protect ePHI from improper alteration or destruction."
+  criteria:
+    - id: protection
+      text: "Requires protection of ePHI against improper alteration or destruction."
+      keywords: [integrity, alteration, destruction, unauthorized changes, protect]
+      synth: ["Controls protect the integrity of ePHI against improper alteration or destruction."]
+    - id: controls
+      text: "Names the controls, such as change control, restricted write access and versioning."
+      keywords: [change control, checksum, hash, write access, version]
+      synth: ["Write access to ePHI is restricted, and changes follow change control with versioning."]
+  queries:
+    - "protecting ePHI from improper alteration or destruction"
+    - "change control and restricted write access"
+    - "data integrity controls"
+
+- id: ephi-authentication-mechanism
+  citation: "45 CFR 164.312(c)(2)"
+  title: Mechanism to authenticate ePHI
+  safeguard: technical
+  standard: Integrity
+  requirement: addressable
+  expectation: "Electronic mechanisms confirm that ePHI has not been altered or destroyed in an unauthorized manner."
+  criteria:
+    - id: verification
+      text: "Uses mechanisms such as checksums, hashes or digital signatures to verify that data is unchanged."
+      keywords: [checksum, hash, digital signature, integrity check, verify]
+      synth: ["Checksums and digital signatures are used to verify that ePHI has not been changed."]
+    - id: alerts
+      text: "Detects and alerts on unauthorized changes, for example with file integrity monitoring."
+      keywords: [alert, detect, monitor, tamper, file integrity]
+      synth: ["File integrity monitoring detects tampering and alerts the security team."]
+  queries:
+    - "checksums or digital signatures to verify data is unchanged"
+    - "file integrity monitoring"
+    - "detecting unauthorized modification of ePHI"
+
+- id: person-entity-authentication
+  citation: "45 CFR 164.312(d)"
+  title: Person or entity authentication
+  safeguard: technical
+  standard: Person or entity authentication
+  requirement: required
+  expectation: "Procedures verify that a person or entity seeking access to ePHI is the one claimed."
+  criteria:
+    - id: method
+      text: "Requires users to authenticate, for example with passwords, tokens or other factors."
+      keywords: [authenticate, authentication, password, multi-factor, token]
+      synth: ["Users must authenticate with a password and a second factor before accessing systems that hold ePHI."]
+    - id: remote
+      text: "Requires stronger authentication for remote or privileged access."
+      keywords: [multi-factor, mfa, remote access, vpn, privileged]
+      synth: ["Remote and privileged access requires multi-factor authentication over the VPN."]
+  queries:
+    - "user authentication and multi-factor authentication"
+    - "verifying identity before access to ePHI"
+    - "remote access and privileged accounts authentication"
+
+- id: transmission-integrity-controls
+  citation: "45 CFR 164.312(e)(2)(i)"
+  title: Integrity controls for transmission
+  safeguard: technical
+  standard: Transmission security
+  requirement: addressable
+  expectation: "Security measures ensure that electronically transmitted ePHI is not improperly modified without detection."
+  criteria:
+    - id: integrity
+      text: "Protects ePHI in transit against undetected modification, for example through TLS or message authentication."
+      keywords: [transmission, integrity, tls, checksum, modification]
+      synth: ["Transmission of ePHI uses protocols such as TLS that protect integrity so that modification in transit is detected."]
+    - id: detection
+      text: "Verifies integrity of transmitted data and detects tampering."
+      keywords: [detect, verify, hash, message authentication, tamper]
+      synth: ["Message authentication and hashes are verified on receipt to detect tampering."]
+  queries:
+    - "integrity of ePHI during transmission"
+    - "TLS and message authentication"
+    - "detecting modification of data in transit"
+
+- id: transmission-encryption
+  citation: "45 CFR 164.312(e)(2)(ii)"
+  title: Encryption in transit
+  safeguard: technical
+  standard: Transmission security
+  requirement: addressable
+  expectation: "ePHI is encrypted when it is transmitted over electronic communications networks, where appropriate."
+  criteria:
+    - id: in-transit
+      text: "Requires encryption of ePHI in transit, for example TLS, VPN or encrypted email."
+      keywords: [encrypt, tls, https, in transit, vpn]
+      synth: ["ePHI is encrypted in transit using TLS 1.2 or higher, VPN or encrypted email."]
+    - id: prohibited
+      text: "Prohibits sending ePHI over unencrypted channels and names approved secure methods."
+      keywords: [approved, secure channel, unencrypted, prohibited, sftp]
+      synth: ["Sending ePHI over unencrypted channels is prohibited, and only approved secure channels such as SFTP may be used."]
+  queries:
+    - "encryption of ePHI in transit"
+    - "TLS, VPN and encrypted email"
+    - "prohibition on unencrypted transmission of patient data"

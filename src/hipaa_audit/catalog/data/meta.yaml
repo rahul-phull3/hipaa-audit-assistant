@@ -1,0 +1,10 @@
+version: "2026.10-r1"
+regulation: "45 CFR Part 164, Subpart C (HIPAA Security Rule)"
+rule_status: >-
+  Written against the Security Rule text in force when the catalog was prepared, including the split between required and
+  addressable implementation specifications. A revision proposed in a notice published on 27 December 2024 would remove that
+  split. Check whether a final rule has been issued since before relying on this catalog.
+notes:
+  - "Controls are paraphrased summaries for review support. They are not the regulatory text; read the regulation itself."
+  - "Two controls that apply only to particular entity types are left out: isolating health care clearinghouse functions (164.308(a)(4)(ii)(A)) and the requirements for group health plans (164.314(b))."
+  - "An assessment covers what a policy document says. It cannot show that a control is implemented or effective."

@@ -1,0 +1,209 @@
+- id: facility-contingency-operations
+  citation: "45 CFR 164.310(a)(2)(i)"
+  title: Contingency operations
+  safeguard: physical
+  standard: Facility access controls
+  requirement: addressable
+  expectation: "Procedures allow facility access in support of restoring lost data under the disaster recovery and emergency mode plans."
+  criteria:
+    - id: access
+      text: "Allows authorized people to enter facilities during an emergency to restore lost data."
+      keywords: [facility access, emergency, restoration, after hours, authorized personnel]
+      synth: ["Authorized personnel can enter facilities after hours during an emergency to carry out data restoration under the disaster recovery plan."]
+    - id: designated
+      text: "Names who may enter and how they are contacted."
+      keywords: [designated, authorized, contact list, backup site, on-call]
+      synth: ["A contact list of designated on-call staff who may access the facility and the backup site is maintained."]
+  queries:
+    - "facility access during an emergency to restore data"
+    - "authorized personnel and on-call contact list"
+    - "access to backup site"
+
+- id: facility-security-plan
+  citation: "45 CFR 164.310(a)(2)(ii)"
+  title: Facility security plan
+  safeguard: physical
+  standard: Facility access controls
+  requirement: addressable
+  expectation: "The facility and its equipment are safeguarded against unauthorized physical access, tampering and theft."
+  criteria:
+    - id: safeguards
+      text: "Describes physical safeguards such as locks, badges, cameras and secured areas."
+      keywords: [locks, badge, camera, cctv, secure area]
+      synth: ["Server rooms and offices are protected with locks, badge readers and camera surveillance."]
+    - id: plan
+      text: "Has a documented facility security plan that is reviewed."
+      keywords: [facility security plan, document, review, server room, tampering]
+      synth: ["A documented facility security plan addresses unauthorized access, tampering and theft and is reviewed annually."]
+  queries:
+    - "physical security of facilities and equipment"
+    - "locks, badges and cameras protecting server rooms"
+    - "facility security plan against theft and tampering"
+
+- id: access-control-validation
+  citation: "45 CFR 164.310(a)(2)(iii)"
+  title: Access control and validation procedures
+  safeguard: physical
+  standard: Facility access controls
+  requirement: addressable
+  expectation: "Procedures control and validate a person's access to facilities based on role, including visitor control."
+  criteria:
+    - id: role-access
+      text: "Limits facility access to people whose role requires it and validates their identity."
+      keywords: [badge, role, authorized, access list, validate]
+      synth: ["Physical access to areas containing ePHI is limited to authorized staff whose role requires it, and badges are validated at entry."]
+    - id: visitors
+      text: "Controls visitors by sign-in, escort and badges."
+      keywords: [visitor, escort, sign in, log, badge]
+      synth: ["Visitors sign in, wear a visitor badge and are escorted at all times."]
+  queries:
+    - "role-based physical access and validation"
+    - "visitor sign-in and escort"
+    - "authorized access list for secure areas"
+
+- id: maintenance-records
+  citation: "45 CFR 164.310(a)(2)(iv)"
+  title: Maintenance records
+  safeguard: physical
+  standard: Facility access controls
+  requirement: addressable
+  expectation: "Repairs and modifications to security-related physical components, such as hardware, walls, doors and locks, are documented."
+  criteria:
+    - id: records
+      text: "Requires repairs and modifications to security-related physical components to be recorded."
+      keywords: [maintenance, repair, record, log, doors]
+      synth: ["Repairs and modifications to doors, locks, walls and hardware that affect security are recorded in a maintenance log."]
+    - id: responsibility
+      text: "Says who keeps the records and how long they are retained."
+      keywords: [responsible, facilities, retain, review, owner]
+      synth: ["The facilities manager is responsible for the maintenance log and retains it for six years."]
+  queries:
+    - "maintenance records for doors, locks and hardware"
+    - "documenting repairs to physical security components"
+    - "facilities maintenance log"
+
+- id: workstation-use
+  citation: "45 CFR 164.310(b)"
+  title: Workstation use
+  safeguard: physical
+  standard: Workstation use
+  requirement: required
+  expectation: "The policy specifies the proper functions to be performed on workstations that access ePHI, how they are performed, and the physical surroundings of those workstations."
+  criteria:
+    - id: acceptable-use
+      text: "Defines acceptable use of workstations that access ePHI."
+      keywords: [workstation, acceptable use, permitted, functions, ephi]
+      synth: ["Workstations that access ePHI may only be used for authorized job functions in line with the acceptable use policy."]
+    - id: environment
+      text: "Addresses the physical surroundings, such as screen privacy and location away from public areas."
+      keywords: [screen, privacy, location, positioned, public areas]
+      synth: ["Workstations are positioned so that screens cannot be viewed from public areas, and privacy screens are used where needed."]
+  queries:
+    - "acceptable use of workstations that access ePHI"
+    - "screen privacy and workstation location"
+    - "permitted functions on workstations"
+
+- id: workstation-security
+  citation: "45 CFR 164.310(c)"
+  title: Workstation security
+  safeguard: physical
+  standard: Workstation security
+  requirement: required
+  expectation: "Physical safeguards for all workstations that access ePHI restrict access to authorized users."
+  criteria:
+    - id: protection
+      text: "Requires physical protection of workstations, such as locked rooms or cable locks, with access limited to authorized users."
+      keywords: [lock, cable, secured, restricted area, authorized users]
+      synth: ["Workstations that access ePHI are kept in restricted areas or secured with cable locks, and only authorized users may use them."]
+    - id: screen-lock
+      text: "Requires screens to be locked when unattended and a clear-desk practice."
+      keywords: [screen lock, lock screen, unattended, timeout, clear desk]
+      synth: ["Users must lock their screen whenever a workstation is unattended and follow a clear desk practice."]
+  queries:
+    - "physical safeguards for workstations"
+    - "screen lock when workstation is unattended"
+    - "restricting workstation access to authorized users"
+
+- id: device-media-disposal
+  citation: "45 CFR 164.310(d)(2)(i)"
+  title: Disposal of hardware and media
+  safeguard: physical
+  standard: Device and media controls
+  requirement: required
+  expectation: "The policy covers the final disposition of ePHI and of the hardware or electronic media on which it is stored."
+  criteria:
+    - id: method
+      text: "Specifies how ePHI and the media that hold it are destroyed or sanitized before disposal."
+      keywords: [disposal, destroy, shred, wipe, sanitize]
+      synth: ["Hardware and media that held ePHI are destroyed by shredding or securely wiped according to NIST 800-88 before disposal."]
+    - id: verification
+      text: "Requires records or certificates showing that disposal took place."
+      keywords: [certificate, verification, record, vendor, nist]
+      synth: ["A certificate of destruction is obtained from the disposal vendor and kept as a record."]
+  queries:
+    - "disposal of hardware and electronic media containing ePHI"
+    - "secure destruction, shredding or wiping of devices"
+    - "certificate of destruction"
+
+- id: media-reuse
+  citation: "45 CFR 164.310(d)(2)(ii)"
+  title: Media re-use
+  safeguard: physical
+  standard: Device and media controls
+  requirement: required
+  expectation: "ePHI is removed from electronic media before the media are made available for re-use."
+  criteria:
+    - id: sanitization
+      text: "Requires ePHI to be removed or the media sanitized before re-use or reissue."
+      keywords: [reuse, re-use, wipe, sanitize, erase]
+      synth: ["Before any device or media is reissued or reused, all ePHI is erased using an approved sanitization method."]
+    - id: verification
+      text: "Requires the removal to be verified and recorded."
+      keywords: [verify, confirm, record, test, redeploy]
+      synth: ["The removal of ePHI is verified and recorded before the device is redeployed."]
+  queries:
+    - "removing ePHI before media re-use or reissue"
+    - "sanitizing devices before redeployment"
+    - "verification that data has been erased"
+
+- id: device-media-accountability
+  citation: "45 CFR 164.310(d)(2)(iii)"
+  title: Accountability for devices and media
+  safeguard: physical
+  standard: Device and media controls
+  requirement: addressable
+  expectation: "A record is kept of the movements of hardware and electronic media and of the person responsible for them."
+  criteria:
+    - id: tracking
+      text: "Keeps an inventory and tracks the movement of hardware and media that hold ePHI."
+      keywords: [inventory, asset, track, movement, serial]
+      synth: ["An asset inventory tracks the location and movement of every device and medium that holds ePHI."]
+    - id: custodian
+      text: "Assigns a responsible person for each device or medium and records transfers."
+      keywords: [responsible, custodian, check out, sign, transfer]
+      synth: ["Each device has a named custodian, and transfers are signed for and recorded."]
+  queries:
+    - "inventory and tracking of devices and media"
+    - "custodian responsible for each device"
+    - "recording transfers of hardware"
+
+- id: data-backup-before-movement
+  citation: "45 CFR 164.310(d)(2)(iv)"
+  title: Data backup and storage before equipment is moved
+  safeguard: physical
+  standard: Device and media controls
+  requirement: addressable
+  expectation: "A retrievable exact copy of ePHI is created, when needed, before equipment is moved."
+  criteria:
+    - id: copy
+      text: "Requires a backup copy of ePHI before equipment is moved or relocated."
+      keywords: [before moving, backup, copy, relocation, transfer]
+      synth: ["A retrievable backup copy of ePHI is made before any equipment is moved or relocated."]
+    - id: verify
+      text: "Requires the copy to be verified as restorable."
+      keywords: [verify, restore, retrievable, confirm, document]
+      synth: ["The backup is verified as restorable and the check is documented before the equipment leaves its location."]
+  queries:
+    - "backup before moving equipment"
+    - "relocation of servers and workstations"
+    - "verifying the copy can be restored"
