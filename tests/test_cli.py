@@ -43,6 +43,14 @@ class CliTests(unittest.TestCase):
         self.assertIn("heuristic:keywords", err)
         self.assertNotIn("Model tokens", err)  # the offline matcher uses no model, so there is nothing to count
 
+    def test_progress_log_ends_at_the_full_count_when_stderr_is_not_a_terminal(self):
+        # Piped output (CI logs) prints every tenth control; the offline matcher finishes before the first poll, so
+        # without a closing line the log would read "0/48" and then "Done".
+        code, _out, err = run_cli("audit", str(self.policy), "--backend", "heuristic")
+        self.assertEqual(code, 0, err)
+        progress = [line for line in err.splitlines() if line.startswith("Assessed ")]
+        self.assertEqual(progress[-1], "Assessed 48/48 controls", err)
+
     def test_json_output_to_a_file(self):
         target = Path(self.dir.name) / "report.json"
         code, out, err = run_cli(

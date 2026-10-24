@@ -75,7 +75,7 @@ async def _audit(args: argparse.Namespace) -> int:
                 if interactive:
                     sys.stderr.write(f"\rAssessed {last}/{current.total_controls} controls")
                     sys.stderr.flush()
-                elif last % 10 == 0:
+                elif last % 10 == 0 or last == current.total_controls:
                     _say(f"Assessed {last}/{current.total_controls} controls")
             if current.status not in ACTIVE_STATUSES:
                 break
