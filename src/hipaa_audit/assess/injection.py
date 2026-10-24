@@ -1,7 +1,7 @@
 """A heuristic scan for text in the uploaded document that reads like instructions to an AI model.
 
 This is a warning signal, not a defence. The defences are structural: excerpts are XML-escaped and delimited, the system prompt
-tells the model to treat them as data, the model can only answer through one forced tool call, and every quote is verified
+tells the model to treat them as data, an answer counts only as one strict tool call whose input is validated, and every quote is verified
 against the document. A flagged passage is reported so a reviewer can look at it.
 """
 
