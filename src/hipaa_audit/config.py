@@ -31,6 +31,18 @@ def load_env_file(path: str | Path = ".env") -> None:
             os.environ[key] = value
 
 
+def _flag(env: Mapping[str, str], name: str, default: bool) -> bool:
+    raw = env.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    value = raw.strip().lower()
+    if value in ("1", "true", "yes", "on"):
+        return True
+    if value in ("0", "false", "no", "off"):
+        return False
+    raise ConfigError(f"{name} must be true or false, got {raw!r}")
+
+
 def _int(env: Mapping[str, str], name: str, default: int, minimum: int = 1) -> int:
     raw = env.get(name)
     if raw is None or raw == "":
@@ -56,6 +68,9 @@ class Settings:
     max_pages: int = 200
     concurrency: int = 4
     top_k: int = 6
+    max_active_audits: int = 2
+    cache_enabled: bool = True
+    retention_days: int = 0  # 0 keeps audits until they are deleted
     api_key: str | None = None
     cors_origins: tuple[str, ...] = ()
     static_dir: str | None = None
@@ -90,6 +105,9 @@ class Settings:
             max_pages=_int(env, "HIPAA_AUDIT_MAX_PAGES", 200),
             concurrency=_int(env, "HIPAA_AUDIT_CONCURRENCY", 4),
             top_k=_int(env, "HIPAA_AUDIT_TOP_K", 6),
+            max_active_audits=_int(env, "HIPAA_AUDIT_MAX_ACTIVE_AUDITS", 2),
+            cache_enabled=_flag(env, "HIPAA_AUDIT_CACHE", True),
+            retention_days=_int(env, "HIPAA_AUDIT_RETENTION_DAYS", 0, minimum=0),
             api_key=env.get("HIPAA_AUDIT_API_KEY") or None,
             cors_origins=origins,
             static_dir=env.get("HIPAA_AUDIT_STATIC_DIR") or None,

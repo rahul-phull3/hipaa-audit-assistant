@@ -39,6 +39,7 @@ CREATE TABLE audits (
     started_at      TEXT,
     finished_at     TEXT,
     backend         TEXT NOT NULL,
+    embedder        TEXT NOT NULL DEFAULT '',
     catalog_version TEXT NOT NULL,
     prompt_version  TEXT NOT NULL,
     control_ids     TEXT NOT NULL,
@@ -103,6 +104,7 @@ class AuditRecord(BaseModel):
     started_at: str | None = None
     finished_at: str | None = None
     backend: str
+    embedder: str = ""
     catalog_version: str
     prompt_version: str
     control_ids: list[str]
@@ -114,7 +116,7 @@ class AuditRecord(BaseModel):
 
 
 _AUDIT_COLUMNS = (
-    "id, filename, sha256, size_bytes, pages, status, created_at, started_at, finished_at, backend, catalog_version, "
+    "id, filename, sha256, size_bytes, pages, status, created_at, started_at, finished_at, backend, embedder, catalog_version, "
     "prompt_version, control_ids, total_controls, done_controls, chunk_count, usage, error"
 )
 
@@ -196,10 +198,10 @@ class Repository:
     def create_audit(self, record: AuditRecord, chunks: list[Chunk]) -> None:
         with self._tx() as db:
             db.execute(
-                f"INSERT INTO audits ({_AUDIT_COLUMNS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                f"INSERT INTO audits ({_AUDIT_COLUMNS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     record.id, record.filename, record.sha256, record.size_bytes, record.pages, record.status,
-                    record.created_at, record.started_at, record.finished_at, record.backend, record.catalog_version,
+                    record.created_at, record.started_at, record.finished_at, record.backend, record.embedder, record.catalog_version,
                     record.prompt_version, json.dumps(record.control_ids), record.total_controls, record.done_controls,
                     record.chunk_count, record.usage.model_dump_json(), record.error,
                 ),
@@ -224,6 +226,10 @@ class Repository:
     def count_audits(self) -> int:
         with self._lock:
             return self._db.execute("SELECT COUNT(*) FROM audits").fetchone()[0]
+
+    def count_active(self) -> int:
+        with self._lock:
+            return self._db.execute("SELECT COUNT(*) FROM audits WHERE status IN ('queued', 'running')").fetchone()[0]
 
     def claim_for_run(self, audit_id: str) -> bool:
         """queued -> running, atomically. False when the audit was cancelled or deleted while it waited."""
@@ -259,6 +265,13 @@ class Repository:
     def delete_audit(self, audit_id: str) -> bool:
         with self._tx() as db:
             return db.execute("DELETE FROM audits WHERE id = ?", (audit_id,)).rowcount == 1
+
+    def delete_finished_before(self, cutoff_iso: str) -> int:
+        """Retention: remove finished audits created before the cutoff (children go with them)."""
+        with self._tx() as db:
+            return db.execute(
+                "DELETE FROM audits WHERE created_at < ? AND status NOT IN ('queued', 'running')", (cutoff_iso,)
+            ).rowcount
 
     # -- findings and chunks ----------------------------------------------------------------------------------------
 

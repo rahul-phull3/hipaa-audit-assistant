@@ -127,6 +127,25 @@ class EngineTests(unittest.TestCase):
         self.assertIn("assessment_failed", failed.flags)
         self.assertIn("overloaded", failed.rationale)
 
+    def test_unexpected_exception_becomes_a_generic_error_finding(self):
+        backend = ScriptedBackend({"password-management": ValueError("secret detail at /srv/app.py")})
+        result = run(AssessmentEngine(backend, make_index(*POLICY)).run([BACKUP, PASSWORD]))
+        failed = next(f for f in result.findings if f.control_id == "password-management")
+        self.assertEqual(failed.status, "error")
+        self.assertNotIn("secret", failed.rationale)
+        self.assertEqual(result.errors, {"password-management": "unexpected internal error"})
+        self.assertEqual(next(f for f in result.findings if f.control_id == "data-backup-plan").status, "gap")
+
+    def test_failing_progress_callback_stops_the_run(self):
+        def broken(finding):
+            raise OSError("disk full")
+
+        backend = ScriptedBackend(delay=0.01)
+        engine = AssessmentEngine(backend, make_index(*POLICY), concurrency=1)
+        with self.assertRaises(OSError):
+            run(engine.run(CATALOG.controls[:10], on_finding=broken))
+        self.assertEqual(len(backend.calls), 1)
+
     def test_failures_are_not_cached(self):
         cache = MemoryCache()
         backend = ScriptedBackend({"data-backup-plan": LLMUnavailable("down")})

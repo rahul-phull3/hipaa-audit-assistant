@@ -18,6 +18,7 @@ def make_record(**overrides) -> AuditRecord:
         pages=3,
         created_at="2026-10-24T10:00:00+00:00",
         backend="heuristic:keywords",
+        embedder="hashing",
         catalog_version="2026.10-r1",
         prompt_version="v2",
         control_ids=["data-backup-plan", "password-management"],
