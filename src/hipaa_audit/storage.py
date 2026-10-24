@@ -305,6 +305,21 @@ class Repository:
             db.execute("UPDATE audits SET done_controls = ? WHERE id = ?", (done, audit_id))
             return done
 
+    def finding_counts(self, audit_ids: list[str]) -> dict[str, dict[str, int]]:
+        """Findings per status for several audits in one query (for list views)."""
+        if not audit_ids:
+            return {}
+        marks = ",".join("?" * len(audit_ids))
+        with self._lock:
+            rows = self._db.execute(
+                f"SELECT audit_id, status, COUNT(*) AS n FROM findings WHERE audit_id IN ({marks}) GROUP BY audit_id, status",
+                audit_ids,
+            ).fetchall()
+        counts: dict[str, dict[str, int]] = {a: {} for a in audit_ids}
+        for r in rows:
+            counts[r["audit_id"]][r["status"]] = r["n"]
+        return counts
+
     def get_findings(self, audit_id: str) -> list[Finding]:
         with self._lock:
             rows = self._db.execute("SELECT data FROM findings WHERE audit_id = ? ORDER BY position", (audit_id,)).fetchall()

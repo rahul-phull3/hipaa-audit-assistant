@@ -289,6 +289,12 @@ class AuditService:
     def list_audits(self, limit: int = 50, offset: int = 0) -> list[AuditRecord]:
         return self.repo.list_audits(limit=max(1, min(limit, 200)), offset=max(0, offset))
 
+    def list_summaries(self, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
+        """Audits with their finding counts by status, newest first."""
+        records = self.list_audits(limit, offset)
+        counts = self.repo.finding_counts([r.id for r in records])
+        return [{**r.model_dump(mode="json"), "counts": counts.get(r.id, {})} for r in records]
+
     def finding_views(self, audit_id: str) -> list[dict[str, Any]]:
         self.get(audit_id)
         controls = {c.id: c for c in self.catalog.controls}
