@@ -8,11 +8,14 @@ decompression bombs before they are opened.
 from __future__ import annotations
 
 import io
+import logging
 import os
 import re
 import zipfile
 
 from hipaa_audit.models import Block
+
+log = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = (".pdf", ".docx", ".txt", ".md", ".markdown")
 MIN_BODY_WORDS = 20
@@ -197,12 +200,19 @@ def parse_document(filename: str, data: bytes, *, max_pages: int = 200) -> list[
         raise UnsupportedDocument(f"unsupported file type '{ext or filename}'; use PDF, DOCX, TXT or Markdown")
     if not data:
         raise UnsupportedDocument("the file is empty")
-    if ext == ".pdf":
-        blocks = _parse_pdf(data, max_pages)
-    elif ext == ".docx":
-        blocks = _parse_docx(data)
-    else:
-        blocks = _parse_text(data)
+    try:
+        if ext == ".pdf":
+            blocks = _parse_pdf(data, max_pages)
+        elif ext == ".docx":
+            blocks = _parse_docx(data)
+        else:
+            blocks = _parse_text(data)
+    except UnsupportedDocument:
+        raise
+    except Exception as exc:  # a damaged file can break a parser in ways its authors did not anticipate
+        log.warning("an upload with extension %s could not be parsed (%s)", ext, type(exc).__name__)
+        what = {".pdf": "PDF", ".docx": "DOCX file"}.get(ext, "file")
+        raise UnsupportedDocument(f"the {what} could not be read") from exc
     body_words = sum(len(b.text.split()) for b in blocks if not b.is_heading)
     if body_words < MIN_BODY_WORDS:
         raise UnsupportedDocument("no readable text found (a scanned PDF needs OCR first)")

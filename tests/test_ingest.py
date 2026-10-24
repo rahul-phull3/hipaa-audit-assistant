@@ -1,4 +1,9 @@
+import io
+import logging
+import random
 import unittest
+import zipfile
+from collections import Counter
 
 from hipaa_audit.ingest import UnsupportedDocument, chunk_blocks, parse_document
 from hipaa_audit.ingest.parsers import heading_of
@@ -93,6 +98,91 @@ class ParsePdfTests(unittest.TestCase):
     def test_unknown_extension(self):
         with self.assertRaises(UnsupportedDocument):
             parse_document("policy.exe", b"MZ....")
+
+
+class DamagedFileTests(unittest.TestCase):
+    """A damaged upload is the client's mistake. Whatever is wrong with it, the outcome is blocks or ``UnsupportedDocument``;
+    any other exception would reach the API as a 500."""
+
+    def setUp(self):
+        logging.disable(logging.CRITICAL)  # pypdf reports every repair it attempts, and so do we
+        self.addCleanup(logging.disable, logging.NOTSET)
+
+    def assert_only_clean_outcomes(self, name, payloads):
+        unexpected: Counter = Counter()
+        for payload in payloads:
+            try:
+                parse_document(name, payload)
+            except UnsupportedDocument:
+                pass
+            except Exception as exc:  # noqa: BLE001 - the point of the test
+                unexpected[type(exc).__name__] += 1
+        self.assertEqual(dict(unexpected), {})
+
+    @staticmethod
+    def byte_damage(base: bytes, count: int, seed: int):
+        rnd = random.Random(seed)
+        for _ in range(count):
+            data = bytearray(base)
+            kind = rnd.random()
+            if kind < 0.4:
+                for _ in range(rnd.randint(1, 12)):
+                    data[rnd.randrange(len(data))] = rnd.randrange(256)
+            elif kind < 0.7:
+                del data[rnd.randrange(20, len(data)) :]
+            else:
+                start = rnd.randrange(len(data))
+                del data[start : start + rnd.randint(1, 80)]
+            yield bytes(data)
+
+    def test_damaged_pdfs(self):
+        base = make_pdf([["Passwords must be at least fourteen characters long and may not be shared."] * 4])
+        self.assert_only_clean_outcomes("a.pdf", self.byte_damage(base, 400, seed=11))
+
+    def test_pdfs_with_a_missing_page_tree(self):
+        base = make_pdf([["Passwords must be at least fourteen characters long and may not be shared."] * 4])
+        for old, new in (
+            (b"/Pages 2 0 R", b"/Pagez 2 0 R"),  # the catalog has no page tree
+            (b"/Kids [", b"/Kidz ["),  # the page tree has no children
+            (b"/Root 1 0 R", b"/Rooot 1 0 R"),  # the trailer has no catalog
+        ):
+            self.assertIn(old, base)
+            with self.subTest(change=old):
+                self.assert_only_clean_outcomes("a.pdf", [base.replace(old, new)])
+
+    def test_damaged_docx_archives_and_documents(self):
+        base = make_docx()
+        rnd = random.Random(5)
+        with zipfile.ZipFile(io.BytesIO(base)) as archive:
+            parts = {name: archive.read(name) for name in archive.namelist()}
+
+        def inside(xml: bytes) -> bytes:
+            out = io.BytesIO()
+            with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
+                for name, content in parts.items():
+                    archive.writestr(name, xml if name == "word/document.xml" else content)
+            return out.getvalue()
+
+        def damaged_xml():
+            for _ in range(200):
+                xml = bytearray(parts["word/document.xml"])
+                if rnd.random() < 0.5:
+                    for _ in range(rnd.randint(1, 6)):
+                        xml[rnd.randrange(len(xml))] = rnd.randrange(32, 127)
+                else:
+                    start = rnd.randrange(len(xml))
+                    del xml[start : start + rnd.randint(1, 120)]
+                yield inside(bytes(xml))
+
+        self.assert_only_clean_outcomes("a.docx", self.byte_damage(base, 150, seed=3))
+        self.assert_only_clean_outcomes("a.docx", damaged_xml())
+        # a document whose body is missing and a style reference without its value, which the fuzzing above first turned up
+        self.assert_only_clean_outcomes(
+            "a.docx", [inside(b'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>')]
+        )
+        styled = parts["word/document.xml"].replace(b"<w:p>", b"<w:p><w:pPr><w:pStyle/></w:pPr>", 1)
+        self.assertNotEqual(styled, parts["word/document.xml"])
+        self.assert_only_clean_outcomes("a.docx", [inside(styled)])
 
 
 def _paragraph(tag: str, n_sentences: int = 5) -> str:

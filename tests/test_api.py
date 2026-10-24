@@ -9,6 +9,7 @@ from starlette.testclient import TestClient
 from hipaa_audit import service as service_module
 from hipaa_audit.api import create_app
 from hipaa_audit.config import Settings
+from tests.fixtures import make_pdf
 from tests.test_service import IDS, SlowBackend, make_service, policy_text
 
 KEY = "test-key-123"
@@ -153,6 +154,16 @@ class ValidationTests(unittest.TestCase):
             "content-length", response.request.headers
         )  # this must be the streaming path, not the declared-size check
         self.error(response, 413, "too_large")
+
+    def test_a_damaged_document_is_a_client_error_not_a_server_error(self):
+        intact = make_pdf([["Passwords must be at least fourteen characters long and may not be shared."] * 4])
+        damaged = intact.replace(b"/Kids [", b"/Kidz [")  # makes pypdf raise a KeyError deep inside
+        with self.client as client:
+            self.assertEqual(upload(client, "ok.pdf", intact).status_code, 202)
+            refused = upload(client, "damaged.pdf", damaged)
+            self.error(refused, 422, "invalid_request")
+            self.assertIn("could not be read", refused.json()["error"]["message"])
+            self.assertNotIn("Kids", refused.text)  # nothing from the exception reaches the client
 
     def test_malformed_uploads_are_client_errors(self):
         form = {"content-type": "multipart/form-data; boundary=zzz"}
