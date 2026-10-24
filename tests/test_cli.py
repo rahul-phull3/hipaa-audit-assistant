@@ -41,6 +41,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("policy.txt", out)
         self.assertIn("Done:", err)
         self.assertIn("heuristic:keywords", err)
+        self.assertNotIn("Model tokens", err)  # the offline matcher uses no model, so there is nothing to count
 
     def test_json_output_to_a_file(self):
         target = Path(self.dir.name) / "report.json"

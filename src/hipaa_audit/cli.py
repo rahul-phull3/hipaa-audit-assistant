@@ -86,9 +86,12 @@ async def _audit(args: argparse.Namespace) -> int:
             sys.stdout.write(content)
         summary = service.summary(record.id)
         if not args.quiet:
+            tokens = ""
+            if final.usage.input_tokens or final.usage.output_tokens:  # the offline matcher uses no model
+                tokens = f" Model tokens: {final.usage.input_tokens:,} in, {final.usage.output_tokens:,} out."
             _say(
                 f"Done: {summary['met']} met, {summary['partial']} partial, {summary['gap']} gap, "
-                f"{summary['error']} not assessed. Model tokens: {final.usage.input_tokens:,} in, {final.usage.output_tokens:,} out."
+                f"{summary['error']} not assessed.{tokens}"
             )
         if final.status == "failed":
             _say(f"error: the audit failed: {final.error}")
