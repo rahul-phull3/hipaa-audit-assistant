@@ -31,7 +31,9 @@ def error_body(code: str, message: str) -> bytes:
     return json.dumps({"error": {"code": code, "message": message}}).encode("utf-8")
 
 
-async def send_json_error(send: Send, status: int, code: str, message: str, headers: Iterable[tuple[bytes, bytes]] = ()) -> None:
+async def send_json_error(
+    send: Send, status: int, code: str, message: str, headers: Iterable[tuple[bytes, bytes]] = ()
+) -> None:
     body = error_body(code, message)
     await send(
         {

@@ -32,7 +32,12 @@ def make_record(**overrides) -> AuditRecord:
 def make_chunks():
     return [
         Chunk(
-            id="c0001", ord=0, page=1, section="Backups", text="Backups are taken daily.", n_words=4,
+            id="c0001",
+            ord=0,
+            page=1,
+            section="Backups",
+            text="Backups are taken daily.",
+            n_words=4,
             spans=[Span(start=0, end=24, page=1, section="Backups")],
         ),
         Chunk(id="c0002", ord=1, page=2, section="", text="Passwords are never shared.", n_words=4),
@@ -127,7 +132,9 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(self.repo.save_finding(record.id, 1, make_finding("password-management", "gap")), 1)
         self.assertEqual(self.repo.save_finding(record.id, 0, make_finding("data-backup-plan")), 2)
         self.assertEqual(self.repo.get_audit(record.id).done_controls, 2)
-        self.assertEqual([f.control_id for f in self.repo.get_findings(record.id)], ["data-backup-plan", "password-management"])
+        self.assertEqual(
+            [f.control_id for f in self.repo.get_findings(record.id)], ["data-backup-plan", "password-management"]
+        )
         # saving a control again replaces it instead of double counting
         self.assertEqual(self.repo.save_finding(record.id, 0, make_finding("data-backup-plan", "partial")), 2)
         self.assertEqual(self.repo.get_findings(record.id)[0].status, "partial")

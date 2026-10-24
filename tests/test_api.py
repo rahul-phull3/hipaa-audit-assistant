@@ -1,5 +1,3 @@
-import asyncio
-import json
 import tempfile
 import time
 import unittest
@@ -23,7 +21,12 @@ def make_client(backend=None, *, backend_error=None, **settings):
 
 def upload(client, name="policy.txt", data=None, controls=None, headers=None):
     fields = {"controls": controls} if controls else None
-    return client.post("/api/audits", files={"file": (name, data if data is not None else policy_text(), "text/plain")}, data=fields, headers=headers)
+    return client.post(
+        "/api/audits",
+        files={"file": (name, data if data is not None else policy_text(), "text/plain")},
+        data=fields,
+        headers=headers,
+    )
 
 
 def wait_until_done(client, audit_id, headers=None, timeout=15.0):
@@ -52,7 +55,10 @@ class AuditFlowTests(unittest.TestCase):
             findings = client.get(f"/api/audits/{body['id']}/findings").json()["findings"]
             self.assertEqual(len(findings), 48)
             first = findings[0]
-            self.assertEqual(set(first) >= {"control", "status", "rationale", "evidence", "missing_elements", "confidence", "flags"}, True)
+            self.assertEqual(
+                set(first) >= {"control", "status", "rationale", "evidence", "missing_elements", "confidence", "flags"},
+                True,
+            )
             with_evidence = next(f for f in findings if f["evidence"])
             chunk = client.get(f"/api/audits/{body['id']}/chunks/{with_evidence['evidence'][0]['chunk_id']}")
             self.assertEqual(chunk.status_code, 200)
@@ -64,7 +70,7 @@ class AuditFlowTests(unittest.TestCase):
 
             md = client.get(f"/api/audits/{body['id']}/report?format=md")
             self.assertEqual(md.status_code, 200)
-            self.assertIn("attachment; filename=\"hipaa-review-policy.md\"", md.headers["content-disposition"])
+            self.assertIn('attachment; filename="hipaa-review-policy.md"', md.headers["content-disposition"])
             self.assertIn("# HIPAA Security Rule policy review", md.text)
             as_json = client.get(f"/api/audits/{body['id']}/report?format=json")
             self.assertEqual(as_json.json()["summary"]["assessed"], 48)
@@ -140,17 +146,28 @@ class ValidationTests(unittest.TestCase):
                 yield b"x " * (128 * 1024)  # 2 MB in all, against a 1 MB limit
 
         with self.client as client:
-            response = client.post("/api/audits", content=body(), headers={"content-type": "multipart/form-data; boundary=zzz"})
-        self.assertNotIn("content-length", response.request.headers)  # this must be the streaming path, not the declared-size check
+            response = client.post(
+                "/api/audits", content=body(), headers={"content-type": "multipart/form-data; boundary=zzz"}
+            )
+        self.assertNotIn(
+            "content-length", response.request.headers
+        )  # this must be the streaming path, not the declared-size check
         self.error(response, 413, "too_large")
 
     def test_malformed_uploads_are_client_errors(self):
         form = {"content-type": "multipart/form-data; boundary=zzz"}
         with self.client as client:
-            self.error(client.post("/api/audits", content=b"this is not multipart", headers=form), 422, "invalid_request")
-            self.error(client.post("/api/audits", content=b"x", headers={"content-type": "multipart/form-data"}), 422, "invalid_request")
+            self.error(
+                client.post("/api/audits", content=b"this is not multipart", headers=form), 422, "invalid_request"
+            )
+            self.error(
+                client.post("/api/audits", content=b"x", headers={"content-type": "multipart/form-data"}),
+                422,
+                "invalid_request",
+            )
             two_files = client.post(
-                "/api/audits", files=[("file", ("a.txt", b"one", "text/plain")), ("file", ("b.txt", b"two", "text/plain"))]
+                "/api/audits",
+                files=[("file", ("a.txt", b"one", "text/plain")), ("file", ("b.txt", b"two", "text/plain"))],
             )
             self.error(two_files, 422, "invalid_request")
             self.error(client.post("/api/audits", json={"file": "x"}), 422, "invalid_request")
@@ -217,7 +234,12 @@ class SecurityTests(unittest.TestCase):
         self.addCleanup(service.repo.close)
         with client:
             ok = client.options(
-                "/api/audits", headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "x-api-key"}
+                "/api/audits",
+                headers={
+                    "Origin": "http://localhost:5173",
+                    "Access-Control-Request-Method": "POST",
+                    "Access-Control-Request-Headers": "x-api-key",
+                },
             )
             self.assertEqual(ok.status_code, 200)  # preflight needs no key
             self.assertEqual(ok.headers["access-control-allow-origin"], "http://localhost:5173")

@@ -20,10 +20,13 @@ PATTERNS: dict[str, re.Pattern[str]] = {
     "role_override": re.compile(r"\byou are (now|no longer)\b|\bnew instructions?\s*:", _FLAGS),
     "prompt_reference": re.compile(r"\b(system prompt|developer message|record_assessment)\b", _FLAGS),
     "force_status": re.compile(
-        r"\b(mark|rate|record|set|report)\b[^.\n]{0,30}\b(all|every|each)\b[^.\n]{0,30}\b(met|compliant|passed)\b", _FLAGS
+        r"\b(mark|rate|record|set|report)\b[^.\n]{0,30}\b(all|every|each)\b[^.\n]{0,30}\b(met|compliant|passed)\b",
+        _FLAGS,
     ),
     "fake_markup": re.compile(r"</?\s*(excerpts?|control|system|assistant|human|user)\b", _FLAGS),
-    "suppress_findings": re.compile(r"\bdo not (report|mention|flag)\b[^.\n]{0,30}\b(findings?|gaps?|issues?|violations?)\b", _FLAGS),
+    "suppress_findings": re.compile(
+        r"\bdo not (report|mention|flag)\b[^.\n]{0,30}\b(findings?|gaps?|issues?|violations?)\b", _FLAGS
+    ),
 }
 
 

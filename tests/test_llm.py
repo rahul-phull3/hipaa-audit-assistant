@@ -49,7 +49,10 @@ def fake_sdk():
 def tool_response(payload, *, stop_reason="tool_use", usage=(100, 20, 0, 0), name=TOOL_NAME):
     block = SimpleNamespace(type="tool_use", name=name, input=payload)
     u = SimpleNamespace(
-        input_tokens=usage[0], output_tokens=usage[1], cache_read_input_tokens=usage[2], cache_creation_input_tokens=usage[3]
+        input_tokens=usage[0],
+        output_tokens=usage[1],
+        cache_read_input_tokens=usage[2],
+        cache_creation_input_tokens=usage[3],
     )
     return SimpleNamespace(content=[block], stop_reason=stop_reason, usage=u)
 
@@ -103,7 +106,8 @@ class AnthropicBackendTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('<excerpt id="c0001" page="2" section="Backups">', call["messages"][0]["content"])
         self.assertEqual((raw.status, raw.evidence[0].excerpt_id), ("met", "c0001"))
         self.assertEqual(
-            (usage.input_tokens, usage.output_tokens, usage.cache_read_tokens, usage.cache_creation_tokens), (1200, 150, 900, 300)
+            (usage.input_tokens, usage.output_tokens, usage.cache_read_tokens, usage.cache_creation_tokens),
+            (1200, 150, 900, 300),
         )
         self.assertEqual(backend.name, "anthropic:claude-test")
 
@@ -115,7 +119,9 @@ class AnthropicBackendTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((finding.status, finding.evidence[0].page), ("met", 2))
 
     async def test_malformed_first_answer_is_retried_once_with_more_room(self):
-        empty = SimpleNamespace(content=[SimpleNamespace(type="text", text="Sorry")], stop_reason="end_turn", usage=None)
+        empty = SimpleNamespace(
+            content=[SimpleNamespace(type="text", text="Sorry")], stop_reason="end_turn", usage=None
+        )
         client = FakeClient(empty, tool_response(GOOD, usage=(10, 5, 0, 0)))
         backend = AnthropicBackend(api_key=None, model="m", client=client, max_tokens=500)
         raw, usage = await backend.assess(self.control, [CHUNK])
@@ -134,7 +140,9 @@ class AnthropicBackendTests(unittest.IsolatedAsyncioTestCase):
     async def test_thinking_blocks_before_the_tool_call_are_ignored(self):
         response = tool_response(GOOD)
         response.content.insert(0, SimpleNamespace(type="thinking", thinking="", signature="x"))
-        raw, _ = await AnthropicBackend(api_key=None, model="m", client=FakeClient(response)).assess(self.control, [CHUNK])
+        raw, _ = await AnthropicBackend(api_key=None, model="m", client=FakeClient(response)).assess(
+            self.control, [CHUNK]
+        )
         self.assertEqual(raw.status, "met")
 
     async def test_truncated_twice_raises_format_error(self):
@@ -144,7 +152,9 @@ class AnthropicBackendTests(unittest.IsolatedAsyncioTestCase):
             await backend.assess(self.control, [CHUNK])
 
     async def test_schema_violation_counts_as_malformed(self):
-        bad = tool_response({"status": "perfect", "rationale": "x", "evidence": [], "missing_elements": [], "confidence": 1})
+        bad = tool_response(
+            {"status": "perfect", "rationale": "x", "evidence": [], "missing_elements": [], "confidence": 1}
+        )
         backend = AnthropicBackend(api_key=None, model="m", client=FakeClient(bad, bad))
         with self.assertRaises(LLMFormatError):
             await backend.assess(self.control, [CHUNK])
@@ -198,8 +208,10 @@ class HeuristicBackendTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_hyphenated_keywords_match_both_spellings(self):
         control = load_catalog().get("login-monitoring")
-        for text in ("Log-in attempts, including failed attempts, are monitored and accounts are locked after repeated failures.",
-                     "Login attempts, including failed attempts, are monitored and accounts are locked after repeated failures."):
+        for text in (
+            "Log-in attempts, including failed attempts, are monitored and accounts are locked after repeated failures.",
+            "Login attempts, including failed attempts, are monitored and accounts are locked after repeated failures.",
+        ):
             raw, _ = await HeuristicBackend().assess(control, [self.chunk(text)])
             self.assertGreaterEqual(len(raw.evidence), 1, text)
 
@@ -242,7 +254,15 @@ class HeuristicPrecisionTests(unittest.IsolatedAsyncioTestCase):
         for text, page, section in parts:
             spans.append(Span(start=pos, end=pos + len(text), page=page, section=section))
             pos += len(text) + 1
-        chunk = Chunk(id="c0001", ord=0, n_words=20, page=5, section="Policy > Termination", text="\n".join(t for t, _, _ in parts), spans=spans)
+        chunk = Chunk(
+            id="c0001",
+            ord=0,
+            n_words=20,
+            page=5,
+            section="Policy > Termination",
+            text="\n".join(t for t, _, _ in parts),
+            spans=spans,
+        )
         raw, _ = await HeuristicBackend().assess(control, [chunk])
         finding = finalize(control.id, raw, [chunk], model="heuristic")
         self.assertEqual((finding.evidence[0].page, finding.evidence[0].section), (6, "Policy > Automatic logoff"))
@@ -251,14 +271,21 @@ class HeuristicPrecisionTests(unittest.IsolatedAsyncioTestCase):
 class ConfigTests(unittest.TestCase):
     def test_defaults(self):
         s = Settings.from_env({})
-        self.assertEqual((s.llm_backend, s.model, s.embedder, s.concurrency, s.top_k), ("anthropic", "claude-sonnet-5-5", "auto", 4, 6))
+        self.assertEqual(
+            (s.llm_backend, s.model, s.embedder, s.concurrency, s.top_k),
+            ("anthropic", "claude-sonnet-5-5", "auto", 4, 6),
+        )
         self.assertEqual(s.effort, "medium")
         self.assertIsNone(s.api_key)
         self.assertEqual(s.max_upload_bytes, 10 * 1024 * 1024)
 
     def test_values_and_cors_list(self):
         s = Settings.from_env(
-            {"HIPAA_AUDIT_LLM_BACKEND": "HEURISTIC", "HIPAA_AUDIT_CORS_ORIGINS": "http://a.test, http://b.test,", "HIPAA_AUDIT_CONCURRENCY": "8"}
+            {
+                "HIPAA_AUDIT_LLM_BACKEND": "HEURISTIC",
+                "HIPAA_AUDIT_CORS_ORIGINS": "http://a.test, http://b.test,",
+                "HIPAA_AUDIT_CONCURRENCY": "8",
+            }
         )
         self.assertEqual((s.llm_backend, s.concurrency), ("heuristic", 8))
         self.assertEqual(s.cors_origins, ("http://a.test", "http://b.test"))

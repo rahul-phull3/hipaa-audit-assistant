@@ -56,7 +56,9 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(len(self.catalog.select(None)), 48)
         self.assertEqual(len(self.catalog.select([])), 48)
         picked = self.catalog.select(["audit-controls", "risk-analysis"])
-        self.assertEqual([c.id for c in picked], ["risk-analysis", "audit-controls"])  # catalog order, not request order
+        self.assertEqual(
+            [c.id for c in picked], ["risk-analysis", "audit-controls"]
+        )  # catalog order, not request order
         with self.assertRaises(KeyError):
             self.catalog.select(["nope"])
 

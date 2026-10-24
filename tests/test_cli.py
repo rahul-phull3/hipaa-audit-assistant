@@ -15,7 +15,11 @@ from tests.test_service import IDS, policy_text
 
 def run_cli(*argv, env=None):
     out, err = io.StringIO(), io.StringIO()
-    with mock.patch.dict(os.environ, env or {}, clear=False), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+    with (
+        mock.patch.dict(os.environ, env or {}, clear=False),
+        contextlib.redirect_stdout(out),
+        contextlib.redirect_stderr(err),
+    ):
         code = main(list(argv))
     return code, out.getvalue(), err.getvalue()
 
@@ -40,7 +44,9 @@ class CliTests(unittest.TestCase):
 
     def test_json_output_to_a_file(self):
         target = Path(self.dir.name) / "report.json"
-        code, out, err = run_cli("audit", str(self.policy), "--backend", "heuristic", "--format", "json", "-o", str(target), "-q")
+        code, out, err = run_cli(
+            "audit", str(self.policy), "--backend", "heuristic", "--format", "json", "-o", str(target), "-q"
+        )
         self.assertEqual((code, out, err.strip()), (0, "", f"Report written to {target}"))
         report = json.loads(target.read_text(encoding="utf-8"))
         self.assertEqual(report["summary"]["assessed"], 48)
@@ -58,7 +64,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual((code, "Unsupported file type" in err), (2, True))
 
     def test_missing_api_key_is_a_clear_error(self):
-        code, _out, err = run_cli("audit", str(self.policy), env={"HIPAA_AUDIT_LLM_BACKEND": "anthropic", "ANTHROPIC_API_KEY": ""})
+        code, _out, err = run_cli(
+            "audit", str(self.policy), env={"HIPAA_AUDIT_LLM_BACKEND": "anthropic", "ANTHROPIC_API_KEY": ""}
+        )
         self.assertEqual(code, 2)
         self.assertIn("ANTHROPIC_API_KEY", err)
 
@@ -114,7 +122,16 @@ class CliTests(unittest.TestCase):
         self.assertIn("without HIPAA_AUDIT_API_KEY", err)
         run.call_args.args[0].state.service.repo.close()
         with mock.patch("uvicorn.run") as run:
-            code, _out, err = run_cli("serve", "--host", "0.0.0.0", "--db", ":memory:", "--backend", "heuristic", env={"HIPAA_AUDIT_API_KEY": "k"})
+            code, _out, err = run_cli(
+                "serve",
+                "--host",
+                "0.0.0.0",
+                "--db",
+                ":memory:",
+                "--backend",
+                "heuristic",
+                env={"HIPAA_AUDIT_API_KEY": "k"},
+            )
         self.assertEqual((code, err), (0, ""))
         run.call_args.args[0].state.service.repo.close()
 

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import sqlite3
 import unittest
 from datetime import UTC, datetime, timedelta
 from unittest import mock
@@ -25,7 +26,13 @@ from hipaa_audit.storage import Repository
 from tests.fixtures import make_docx, make_pdf
 
 CATALOG = load_catalog()
-IDS = ["data-backup-plan", "password-management", "automatic-logoff", "facility-security-plan", "security-awareness-training"]
+IDS = [
+    "data-backup-plan",
+    "password-management",
+    "automatic-logoff",
+    "facility-security-plan",
+    "security-awareness-training",
+]
 
 
 def policy_text(control_ids=IDS) -> bytes:
@@ -47,7 +54,9 @@ class SlowBackend:
         await asyncio.sleep(self.delay)
         if self.error:
             raise self.error
-        return RawAssessment(status="gap", rationale="Nothing.", confidence=0.5), Usage(input_tokens=10, output_tokens=1)
+        return RawAssessment(status="gap", rationale="Nothing.", confidence=0.5), Usage(
+            input_tokens=10, output_tokens=1
+        )
 
 
 def make_service(backend=None, *, backend_error=None, repo=None, **settings):
@@ -72,17 +81,27 @@ class SubmitTests(unittest.TestCase):
         self.assertEqual(record.total_controls, len(CATALOG.controls))
         self.assertGreater(record.chunk_count, 0)
         self.assertEqual(len(record.sha256), 64)
-        self.assertEqual((record.backend, record.embedder, record.catalog_version), ("heuristic:keywords", "hashing", CATALOG.meta.version))
+        self.assertEqual(
+            (record.backend, record.embedder, record.catalog_version),
+            ("heuristic:keywords", "hashing", CATALOG.meta.version),
+        )
         self.assertEqual(len(self.svc.repo.get_chunks(record.id)), record.chunk_count)
 
     def test_pdf_page_count_and_docx_are_supported(self):
-        pdf = make_pdf([["Backups are taken daily and stored off site. " * 6], ["Passwords must never be shared with anyone. " * 6]])
+        pdf = make_pdf(
+            [
+                ["Backups are taken daily and stored off site. " * 6],
+                ["Passwords must never be shared with anyone. " * 6],
+            ]
+        )
         self.assertEqual(self.svc.submit("p.pdf", pdf).pages, 2)
         self.assertIsNone(self.svc.submit("p.docx", make_docx()).pages)
 
     def test_selected_controls_are_kept_in_catalog_order(self):
         record = self.svc.submit("p.txt", policy_text(), ["password-management", "data-backup-plan"])
-        self.assertEqual(record.control_ids, [c.id for c in CATALOG.controls if c.id in ("password-management", "data-backup-plan")])
+        self.assertEqual(
+            record.control_ids, [c.id for c in CATALOG.controls if c.id in ("password-management", "data-backup-plan")]
+        )
         self.assertEqual(record.total_controls, 2)
 
     def test_validation(self):
@@ -328,7 +347,7 @@ class RunTests(unittest.IsolatedAsyncioTestCase):
         await svc.shutdown()
         # the repository was closed by shutdown; reopen nothing, just confirm the task ended
         self.assertEqual(len(svc._tasks), 0)
-        with self.assertRaises(Exception):
+        with self.assertRaises(sqlite3.ProgrammingError):
             repo.get_audit(record.id)  # closed
 
 

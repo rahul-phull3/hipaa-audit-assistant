@@ -216,16 +216,40 @@ class Repository:
             db.execute(
                 f"INSERT INTO audits ({_AUDIT_COLUMNS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
-                    record.id, record.filename, record.sha256, record.size_bytes, record.pages, record.status,
-                    record.created_at, record.started_at, record.finished_at, record.backend, record.embedder, record.catalog_version,
-                    record.prompt_version, json.dumps(record.control_ids), record.total_controls, record.done_controls,
-                    record.chunk_count, record.usage.model_dump_json(), record.error,
+                    record.id,
+                    record.filename,
+                    record.sha256,
+                    record.size_bytes,
+                    record.pages,
+                    record.status,
+                    record.created_at,
+                    record.started_at,
+                    record.finished_at,
+                    record.backend,
+                    record.embedder,
+                    record.catalog_version,
+                    record.prompt_version,
+                    json.dumps(record.control_ids),
+                    record.total_controls,
+                    record.done_controls,
+                    record.chunk_count,
+                    record.usage.model_dump_json(),
+                    record.error,
                 ),
             )
             db.executemany(
                 "INSERT INTO chunks (audit_id, chunk_id, ord, page, section, text, n_words, spans) VALUES (?,?,?,?,?,?,?,?)",
                 [
-                    (record.id, c.id, c.ord, c.page, c.section, c.text, c.n_words, json.dumps([s.model_dump() for s in c.spans]))
+                    (
+                        record.id,
+                        c.id,
+                        c.ord,
+                        c.page,
+                        c.section,
+                        c.text,
+                        c.n_words,
+                        json.dumps([s.model_dump() for s in c.spans]),
+                    )
                     for c in chunks
                 ],
             )
@@ -254,11 +278,14 @@ class Repository:
         """queued -> running, atomically. False when the audit was cancelled or deleted while it waited."""
         with self._tx() as db:
             cur = db.execute(
-                "UPDATE audits SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'", (utcnow(), audit_id)
+                "UPDATE audits SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'",
+                (utcnow(), audit_id),
             )
             return cur.rowcount == 1
 
-    def finish(self, audit_id: str, status: AuditStatus, *, usage: Usage | None = None, error: str | None = None) -> None:
+    def finish(
+        self, audit_id: str, status: AuditStatus, *, usage: Usage | None = None, error: str | None = None
+    ) -> None:
         with self._tx() as db:
             db.execute(
                 "UPDATE audits SET status = ?, finished_at = ?, usage = COALESCE(?, usage), error = ? WHERE id = ?",
@@ -268,7 +295,8 @@ class Repository:
     def cancel_if_queued(self, audit_id: str) -> bool:
         with self._tx() as db:
             cur = db.execute(
-                "UPDATE audits SET status = 'cancelled', finished_at = ? WHERE id = ? AND status = 'queued'", (utcnow(), audit_id)
+                "UPDATE audits SET status = 'cancelled', finished_at = ? WHERE id = ? AND status = 'queued'",
+                (utcnow(), audit_id),
             )
             return cur.rowcount == 1
 
@@ -322,7 +350,9 @@ class Repository:
 
     def get_findings(self, audit_id: str) -> list[Finding]:
         with self._lock:
-            rows = self._db.execute("SELECT data FROM findings WHERE audit_id = ? ORDER BY position", (audit_id,)).fetchall()
+            rows = self._db.execute(
+                "SELECT data FROM findings WHERE audit_id = ? ORDER BY position", (audit_id,)
+            ).fetchall()
         return [Finding.model_validate_json(r["data"]) for r in rows]
 
     def get_chunks(self, audit_id: str) -> list[Chunk]:

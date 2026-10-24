@@ -72,7 +72,9 @@ def _parse(response: Any) -> RawAssessment:
                 return RawAssessment.model_validate(block.input)
             except ValueError as exc:
                 raise LLMFormatError(f"tool input did not match the schema: {exc}") from exc
-    raise LLMFormatError(f"the response had no record_assessment tool call (stop_reason={getattr(response, 'stop_reason', None)})")
+    raise LLMFormatError(
+        f"the response had no record_assessment tool call (stop_reason={getattr(response, 'stop_reason', None)})"
+    )
 
 
 class AnthropicBackend:
@@ -218,6 +220,8 @@ class HeuristicBackend:
             rationale += " Only weak keyword matches exist; the closest passages are shown for review but do not count as support."
         confidence = 0.5 if status != "gap" else 0.3
         return (
-            RawAssessment(status=status, rationale=rationale, evidence=evidence, missing_elements=missing, confidence=confidence),
+            RawAssessment(
+                status=status, rationale=rationale, evidence=evidence, missing_elements=missing, confidence=confidence
+            ),
             Usage(),
         )

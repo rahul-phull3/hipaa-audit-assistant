@@ -143,7 +143,9 @@ async def get_chunk(request: Request) -> Response:
 async def get_report(request: Request) -> Response:
     fmt = request.query_params.get("format", "md")
     content, media_type, filename = _service(request).report(request.path_params["audit_id"], fmt)
-    return Response(content, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return Response(
+        content, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 async def cancel_audit(request: Request) -> Response:
@@ -191,7 +193,9 @@ async def http_error(request: Request, exc: Exception) -> Response:
 
 
 def _static_dir(settings: Settings) -> Path | None:
-    candidates = [Path(settings.static_dir)] if settings.static_dir else [Path(__file__).resolve().parents[3] / "ui" / "dist"]
+    candidates = (
+        [Path(settings.static_dir)] if settings.static_dir else [Path(__file__).resolve().parents[3] / "ui" / "dist"]
+    )
     return next((p for p in candidates if (p / "index.html").is_file()), None)
 
 
@@ -224,7 +228,9 @@ def create_app(settings: Settings | None = None, service: AuditService | None = 
     else:
 
         async def root(request: Request) -> Response:
-            return JSONResponse({"name": "hipaa-audit-assistant", "version": __version__, "api": "/api/health", "ui": "not built"})
+            return JSONResponse(
+                {"name": "hipaa-audit-assistant", "version": __version__, "api": "/api/health", "ui": "not built"}
+            )
 
         routes = [*api, Route("/", root, methods=["GET"])]
 

@@ -46,9 +46,25 @@ class LiveServerTests(unittest.TestCase):
             "HIPAA_AUDIT_API_KEY": KEY,
         }
         cls.server = subprocess.Popen(
-            [sys.executable, "-m", "hipaa_audit", "serve", "--port", str(cls.port), "--backend", "heuristic",
-             "--db", str(Path(cls.dir.name) / "live.db"), "--log-level", "warning"],
-            cwd=cls.dir.name, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            [
+                sys.executable,
+                "-m",
+                "hipaa_audit",
+                "serve",
+                "--port",
+                str(cls.port),
+                "--backend",
+                "heuristic",
+                "--db",
+                str(Path(cls.dir.name) / "live.db"),
+                "--log-level",
+                "warning",
+            ],
+            cwd=cls.dir.name,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
         )
         deadline = time.time() + 20
         while time.time() < deadline:
@@ -71,7 +87,7 @@ class LiveServerTests(unittest.TestCase):
             cls.server.kill()
             cls.output, _ = cls.server.communicate()
             cls.dir.cleanup()
-            raise AssertionError("the server did not stop within 15 seconds of SIGTERM")
+            raise AssertionError("the server did not stop within 15 seconds of SIGTERM") from None
         cls.dir.cleanup()
         # uvicorn finishes its graceful shutdown and then re-raises the signal, so SIGTERM shows as -15.
         if cls.server.returncode not in (0, -signal.SIGTERM):
@@ -129,7 +145,9 @@ class LiveServerTests(unittest.TestCase):
         payload, content_type = multipart("malware.exe", b"MZ\x90\x00")
         status, _, body = self.call("POST", "/api/audits", body=payload, content_type=content_type)
         self.assertEqual((status, json.loads(body)["error"]["code"]), (422, "invalid_request"))
-        status, _, body = self.call("POST", "/api/audits", body=b"garbage", content_type="multipart/form-data; boundary=x")
+        status, _, body = self.call(
+            "POST", "/api/audits", body=b"garbage", content_type="multipart/form-data; boundary=x"
+        )
         self.assertEqual((status, json.loads(body)["error"]["code"]), (422, "invalid_request"))
 
 

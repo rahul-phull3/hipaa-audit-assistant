@@ -38,11 +38,14 @@ where = ["src"]
 hipaa_audit = ["catalog/data/*.yaml"]
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+# The formatter wraps code at 120 columns. E501 would also flag the comments, docstrings and prompt text that run a little
+# over, which the formatter cannot (and for the prompts should not) rewrap.
+ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

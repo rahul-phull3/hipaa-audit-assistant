@@ -53,7 +53,9 @@ async def _audit(args: argparse.Namespace) -> int:
     try:
         record = service.submit(path.name, path.read_bytes(), controls)
         if not args.quiet:
-            _say(f"Reviewing {record.filename} ({record.chunk_count} passages) against {record.total_controls} controls with {record.backend}")
+            _say(
+                f"Reviewing {record.filename} ({record.chunk_count} passages) against {record.total_controls} controls with {record.backend}"
+            )
         service.start(record.id)
         interactive = sys.stderr.isatty() and not args.quiet
         last = -1
@@ -137,7 +139,9 @@ def _purge(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="hipaa-audit", description="Review a security policy against HIPAA Security Rule controls.")
+    parser = argparse.ArgumentParser(
+        prog="hipaa-audit", description="Review a security policy against HIPAA Security Rule controls."
+    )
     parser.add_argument("--version", action="version", version=f"hipaa-audit {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 

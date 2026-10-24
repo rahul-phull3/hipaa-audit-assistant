@@ -46,7 +46,10 @@ TOOL_SPEC: dict[str, Any] = {
                 "items": {"type": "string"},
                 "description": "Expected elements the excerpts do not show. Must be empty when status is met.",
             },
-            "confidence": {"type": "number", "description": "Your confidence in the status, from 0 (none) to 1 (certain)."},
+            "confidence": {
+                "type": "number",
+                "description": "Your confidence in the status, from 0 (none) to 1 (certain).",
+            },
         },
         "required": ["status", "rationale", "evidence", "missing_elements", "confidence"],
         "additionalProperties": False,

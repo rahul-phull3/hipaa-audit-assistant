@@ -65,7 +65,9 @@ class FastEmbedEmbedder:
         try:
             from fastembed import TextEmbedding
         except ImportError as exc:  # pragma: no cover - depends on the optional extra
-            raise RuntimeError("fastembed is not installed; install the extra: pip install 'hipaa-audit-assistant[embeddings]'") from exc
+            raise RuntimeError(
+                "fastembed is not installed; install the extra: pip install 'hipaa-audit-assistant[embeddings]'"
+            ) from exc
         self.name = f"fastembed:{model_name}"
         self._model = TextEmbedding(model_name=model_name)
 

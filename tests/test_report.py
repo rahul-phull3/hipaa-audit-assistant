@@ -18,9 +18,20 @@ CATALOG = load_catalog()
 
 def audit(**overrides):
     base = dict(
-        id="a1b2c3", filename="Acme *Security* Policy.pdf", sha256="cd" * 32, size_bytes=900, pages=4, status="completed",
-        created_at="2026-10-24T10:00:00+00:00", backend="heuristic:keywords", catalog_version=CATALOG.meta.version,
-        prompt_version="v2", control_ids=[], total_controls=4, done_controls=4, chunk_count=12,
+        id="a1b2c3",
+        filename="Acme *Security* Policy.pdf",
+        sha256="cd" * 32,
+        size_bytes=900,
+        pages=4,
+        status="completed",
+        created_at="2026-10-24T10:00:00+00:00",
+        backend="heuristic:keywords",
+        catalog_version=CATALOG.meta.version,
+        prompt_version="v2",
+        control_ids=[],
+        total_controls=4,
+        done_controls=4,
+        chunk_count=12,
         usage=Usage(input_tokens=1500, output_tokens=200),
     )
     base.update(overrides)
@@ -28,15 +39,25 @@ def audit(**overrides):
 
 
 def finding(control_id, status, **kw):
-    return Finding(control_id=control_id, status=status, rationale=kw.pop("rationale", "Because."), confidence=kw.pop("confidence", 0.8), **kw)
+    return Finding(
+        control_id=control_id,
+        status=status,
+        rationale=kw.pop("rationale", "Because."),
+        confidence=kw.pop("confidence", 0.8),
+        **kw,
+    )
 
 
 FINDINGS = [
     finding(
-        "data-backup-plan", "met", rationale="Backups are daily.",
+        "data-backup-plan",
+        "met",
+        rationale="Backups are daily.",
         evidence=[Evidence(chunk_id="c0001", quote="Backups are taken daily.", page=3, section="Backups")],
     ),
-    finding("password-management", "partial", missing_elements=["Storage of passwords"], flags=["unsupported_downgraded"]),
+    finding(
+        "password-management", "partial", missing_elements=["Storage of passwords"], flags=["unsupported_downgraded"]
+    ),
     finding("automatic-logoff", "gap", flags=["no_excerpts"]),
     finding("login-monitoring", "error", flags=["assessment_failed"], confidence=0.0),
 ]
@@ -48,7 +69,9 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual((s["assessed"], s["met"], s["partial"], s["gap"], s["error"]), (4, 1, 1, 1, 1))
         self.assertEqual(s["needs_review"], 2)  # the downgraded one and the failed one
         self.assertEqual(s["by_safeguard"]["technical"]["total"], 1)  # automatic logoff
-        self.assertEqual(s["by_safeguard"]["administrative"], {"met": 1, "partial": 1, "gap": 0, "error": 1, "total": 3})
+        self.assertEqual(
+            s["by_safeguard"]["administrative"], {"met": 1, "partial": 1, "gap": 0, "error": 1, "total": 3}
+        )
         self.assertEqual(list(s["by_safeguard"]), ["administrative", "technical"])  # reported in a fixed order
         self.assertNotIn("score", s)
 
@@ -78,7 +101,14 @@ class ReportTests(unittest.TestCase):
 
     def test_markdown_has_the_expected_sections(self):
         md = render_markdown(self.report)
-        for heading in ("# HIPAA Security Rule policy review", "## Summary", "## Needs attention", "## Findings", "### Technical safeguards", "## About this review"):
+        for heading in (
+            "# HIPAA Security Rule policy review",
+            "## Summary",
+            "## Needs attention",
+            "## Findings",
+            "### Technical safeguards",
+            "## About this review",
+        ):
             self.assertIn(heading, md)
         self.assertIn("| Gap | 1 |", md)
         self.assertIn("“Backups are taken daily.” (page 3, section: Backups)", md)
@@ -95,9 +125,17 @@ class ReportTests(unittest.TestCase):
 
     def test_hostile_text_cannot_inject_markup(self):
         hostile = finding(
-            "data-backup-plan", "met",
+            "data-backup-plan",
+            "met",
             rationale="# Heading\n[click](http://evil.example) <script>alert(1)</script>",
-            evidence=[Evidence(chunk_id="c0001", quote="</excerpt>\n## Injected\n![x](http://evil.example/p.png)", page=None, section="<b>S</b>")],
+            evidence=[
+                Evidence(
+                    chunk_id="c0001",
+                    quote="</excerpt>\n## Injected\n![x](http://evil.example/p.png)",
+                    page=None,
+                    section="<b>S</b>",
+                )
+            ],
             missing_elements=["- [ ] fake"],
         )
         md = render_markdown(build_report(audit(), [hostile], CATALOG))
@@ -107,7 +145,10 @@ class ReportTests(unittest.TestCase):
         self.assertNotIn("[click](", md)
         self.assertNotIn("![x](", md)
         self.assertNotIn("<b>", md)
-        self.assertIn("&amp;", render_markdown(build_report(audit(), [finding("data-backup-plan", "gap", rationale="R&D")], CATALOG)))
+        self.assertIn(
+            "&amp;",
+            render_markdown(build_report(audit(), [finding("data-backup-plan", "gap", rationale="R&D")], CATALOG)),
+        )
 
     def test_old_catalog_edition_is_noted_and_unknown_controls_survive(self):
         old = audit(catalog_version="2025.01-r1")

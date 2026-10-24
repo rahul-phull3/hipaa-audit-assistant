@@ -16,9 +16,7 @@ from hipaa_audit.models import Chunk, Evidence, Finding
 
 MIN_QUOTE_CHARS = 12
 _ZERO_WIDTH = dict.fromkeys(map(ord, "​‌‍﻿­"), None)
-_PUNCT = str.maketrans(
-    {"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-", "−": "-"}
-)
+_PUNCT = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-", "−": "-"})
 _ELLIPSIS = re.compile(r"\s*\.{3}\s*")
 
 
@@ -81,7 +79,9 @@ def verify_evidence(raw: RawAssessment, chunks: list[Chunk]) -> tuple[list[Evide
         seen.add(key)
         chunk = by_id[chunk_id]
         page, section = _locate(chunk, segments)
-        accepted.append(Evidence(chunk_id=chunk_id, quote=html.unescape(item.quote).strip(), page=page, section=section))
+        accepted.append(
+            Evidence(chunk_id=chunk_id, quote=html.unescape(item.quote).strip(), page=page, section=section)
+        )
     return accepted, sorted(flags)
 
 
@@ -99,7 +99,9 @@ def finalize(
         status = "gap"
         confidence = min(confidence, 0.4)
         flag_set.add("unsupported_downgraded")
-        rationale = (rationale + " ").lstrip() + "(No quoted support could be verified in the document, so this is recorded as a gap.)"
+        rationale = (
+            rationale + " "
+        ).lstrip() + "(No quoted support could be verified in the document, so this is recorded as a gap.)"
     if status == "met" and missing:
         status = "partial"
         flag_set.add("met_with_missing_downgraded")

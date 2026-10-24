@@ -23,7 +23,9 @@ class ParseTextTests(unittest.TestCase):
     def test_sections_and_bullets(self):
         blocks = parse_document("policy.txt", SAMPLE_POLICY.encode())
         headings = [b.text for b in blocks if b.is_heading]
-        self.assertEqual(headings, ["ACCESS CONTROL POLICY", "1. Purpose", "2. Password Management", "2.1 Automatic Logoff"])
+        self.assertEqual(
+            headings, ["ACCESS CONTROL POLICY", "1. Purpose", "2. Password Management", "2.1 Automatic Logoff"]
+        )
         bullets = [b for b in blocks if b.text.startswith("- Passwords")]
         self.assertEqual(len(bullets), 2)
         self.assertEqual(bullets[0].section, "ACCESS CONTROL POLICY > 2. Password Management")
@@ -62,8 +64,15 @@ class ParsePdfTests(unittest.TestCase):
     def test_pages_and_text(self):
         pdf = make_pdf(
             [
-                ["PASSWORD POLICY", "Passwords must be at least fourteen characters long and may not be shared.", "Users change a password when compromise is suspected."],
-                ["BACKUP POLICY", "Backups of systems that hold ePHI are taken every day and are stored off-site in encrypted form."],
+                [
+                    "PASSWORD POLICY",
+                    "Passwords must be at least fourteen characters long and may not be shared.",
+                    "Users change a password when compromise is suspected.",
+                ],
+                [
+                    "BACKUP POLICY",
+                    "Backups of systems that hold ePHI are taken every day and are stored off-site in encrypted form.",
+                ],
             ]
         )
         blocks = parse_document("policy.pdf", pdf)
@@ -94,14 +103,24 @@ class ChunkSpanTests(unittest.TestCase):
     def test_every_paragraph_keeps_its_own_page_and_section(self):
         blocks = [
             Block(text="Backups", page=1, section="Policy > Backups", is_heading=True),
-            Block(text="Backups are taken daily and stored off site, and restores are tested twice a year.", page=1, section="Policy > Backups"),
+            Block(
+                text="Backups are taken daily and stored off site, and restores are tested twice a year.",
+                page=1,
+                section="Policy > Backups",
+            ),
             Block(text="Passwords", page=2, section="Policy > Passwords", is_heading=True),
-            Block(text="Passwords must be at least twelve characters long and must never be shared with anyone.", page=2, section="Policy > Passwords"),
+            Block(
+                text="Passwords must be at least twelve characters long and must never be shared with anyone.",
+                page=2,
+                section="Policy > Passwords",
+            ),
         ]
         (chunk,) = chunk_blocks(blocks, min_words=100)  # short sections are merged into one chunk
         self.assertEqual((chunk.page, chunk.section), (1, "Policy > Backups"))
         located = [(s.page, s.section, chunk.text[s.start : s.end]) for s in chunk.spans]
-        self.assertEqual([(p, sec) for p, sec, _ in located], [(1, "Policy > Backups")] * 2 + [(2, "Policy > Passwords")] * 2)
+        self.assertEqual(
+            [(p, sec) for p, sec, _ in located], [(1, "Policy > Backups")] * 2 + [(2, "Policy > Passwords")] * 2
+        )
         self.assertEqual(located[1][2], blocks[1].text)
         self.assertEqual(located[3][2], blocks[3].text)
 
@@ -110,7 +129,11 @@ class ChunkSpanTests(unittest.TestCase):
         long_paragraph = " ".join([sentence] * 30)
         blocks = [
             Block(text=long_paragraph, page=3, section="Policy > Access"),
-            Block(text="Visitors sign in and are escorted at all times in secure areas of the building.", page=4, section="Policy > Visitors"),
+            Block(
+                text="Visitors sign in and are escorted at all times in secure areas of the building.",
+                page=4,
+                section="Policy > Visitors",
+            ),
         ]
         chunks = chunk_blocks(blocks, target_words=60, overlap_words=20)
         self.assertGreater(len(chunks), 2)
@@ -143,9 +166,11 @@ class ChunkingTests(unittest.TestCase):
         for b in self.blocks:
             for sentence in b.text.split(". "):
                 self.assertIn(sentence.rstrip("."), joined)
-        for a, b in zip(chunks, chunks[1:]):
+        for a, b in zip(chunks, chunks[1:], strict=False):
             first_sentence_of_next = b.text.split(". ")[0]
-            self.assertIn(first_sentence_of_next, a.text)  # each chunk opens with text carried over from the previous one
+            self.assertIn(
+                first_sentence_of_next, a.text
+            )  # each chunk opens with text carried over from the previous one
 
     def test_long_paragraph_is_split_on_sentences(self):
         long_block = Block(text=_paragraph("long", 60), section="Policy")

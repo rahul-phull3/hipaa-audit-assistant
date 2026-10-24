@@ -45,12 +45,21 @@ FLAG_LABELS = {
     "no_excerpts": "No part of the document could be matched to this control.",
     "assessment_failed": "The model could not assess this control. Run the audit again to retry it.",
 }
-_TO_REVIEW_FLAGS = frozenset({"injection_suspected", "unsupported_downgraded", "met_with_missing_downgraded", "assessment_failed"})
+_TO_REVIEW_FLAGS = frozenset(
+    {"injection_suspected", "unsupported_downgraded", "met_with_missing_downgraded", "assessment_failed"}
+)
 
 
 def control_summary(control: Control | None, control_id: str) -> dict[str, Any]:
     if control is None:  # the catalog edition changed since this audit ran
-        return {"id": control_id, "citation": "", "title": control_id, "safeguard": "", "standard": "", "requirement": ""}
+        return {
+            "id": control_id,
+            "citation": "",
+            "title": control_id,
+            "safeguard": "",
+            "standard": "",
+            "requirement": "",
+        }
     return {
         "id": control.id,
         "citation": control.citation,
@@ -75,12 +84,17 @@ def summarize(findings: list[Finding], catalog: Catalog) -> dict[str, Any]:
         "needs_review": sum(1 for f in findings if _TO_REVIEW_FLAGS & set(f.flags)),
         "by_safeguard": {
             sg: {**{s: counts.get(s, 0) for s in STATUS_ORDER}, "total": sum(counts.values())}
-            for sg, counts in sorted(by_safeguard.items(), key=lambda kv: list(SAFEGUARD_LABELS).index(kv[0]) if kv[0] in SAFEGUARD_LABELS else 99)
+            for sg, counts in sorted(
+                by_safeguard.items(),
+                key=lambda kv: list(SAFEGUARD_LABELS).index(kv[0]) if kv[0] in SAFEGUARD_LABELS else 99,
+            )
         },
     }
 
 
-def build_report(audit: AuditRecord, findings: list[Finding], catalog: Catalog, *, generated_at: str | None = None) -> dict[str, Any]:
+def build_report(
+    audit: AuditRecord, findings: list[Finding], catalog: Catalog, *, generated_at: str | None = None
+) -> dict[str, Any]:
     controls = {c.id: c for c in catalog.controls}
     position = {c.id: i for i, c in enumerate(catalog.controls)}
     ordered = sorted(findings, key=lambda f: position.get(f.control_id, len(position)))
@@ -117,7 +131,9 @@ def build_report(audit: AuditRecord, findings: list[Finding], catalog: Catalog, 
                 "control": control_summary(controls.get(f.control_id), f.control_id),
                 "status": f.status,
                 "rationale": f.rationale,
-                "evidence": [{"quote": e.quote, "page": e.page, "section": e.section, "chunk_id": e.chunk_id} for e in f.evidence],
+                "evidence": [
+                    {"quote": e.quote, "page": e.page, "section": e.section, "chunk_id": e.chunk_id} for e in f.evidence
+                ],
                 "missing_elements": f.missing_elements,
                 "confidence": f.confidence,
                 "flags": f.flags,
@@ -191,7 +207,9 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.append(f"Findings that need a person's attention before they are relied on: {summary['needs_review']}.")
     lines += ["", "| Safeguard | Met | Partial | Gap | Not assessed |", "| --- | ---: | ---: | ---: | ---: |"]
     for sg, counts in summary["by_safeguard"].items():
-        lines.append(f"| {SAFEGUARD_LABELS.get(sg, sg)} | {counts['met']} | {counts['partial']} | {counts['gap']} | {counts['error']} |")
+        lines.append(
+            f"| {SAFEGUARD_LABELS.get(sg, sg)} | {counts['met']} | {counts['partial']} | {counts['gap']} | {counts['error']} |"
+        )
     lines.append("")
 
     findings = report["findings"]
@@ -201,7 +219,9 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines += ["## Needs attention", "", "Gaps first, required items before addressable ones.", ""]
         for f in attention:
             c = f["control"]
-            lines.append(f"- **{STATUS_LABELS[f['status']]}**: {_md(c['title'])} ({_md(c['citation'])}, {c['requirement']})")
+            lines.append(
+                f"- **{STATUS_LABELS[f['status']]}**: {_md(c['title'])} ({_md(c['citation'])}, {c['requirement']})"
+            )
         lines.append("")
 
     lines += ["## Findings", ""]
@@ -234,7 +254,14 @@ def render_markdown(report: dict[str, Any]) -> str:
                 lines += [f"Review note: {FLAG_LABELS.get(flag, _md(flag))}", ""]
 
     cat = report["catalog"]
-    lines += ["## About this review", "", f"Controls come from catalog {_md(cat['version'])} ({_md(cat['regulation'])}).", "", _md(cat["rule_status"]), ""]
+    lines += [
+        "## About this review",
+        "",
+        f"Controls come from catalog {_md(cat['version'])} ({_md(cat['regulation'])}).",
+        "",
+        _md(cat["rule_status"]),
+        "",
+    ]
     lines += [f"- {_md(n)}" for n in cat["notes"]]
     lines.append("")
     return "\n".join(lines)

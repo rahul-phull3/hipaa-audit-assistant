@@ -67,7 +67,7 @@ def safe_filename(name: str | None) -> str:
     """The base name only, without control characters, at a sensible length."""
     base = re.split(r"[\\/]", name or "")[-1]
     base = re.sub(r"[\x00-\x1f\x7f]", "", base).strip().strip(".")
-    return (base[:MAX_FILENAME_CHARS] or "document")
+    return base[:MAX_FILENAME_CHARS] or "document"
 
 
 class AuditService:
@@ -101,7 +101,9 @@ class AuditService:
         except RuntimeError as exc:
             backend_error = str(exc)
             log.warning("model backend not ready: %s", exc)
-        service = cls(settings, repo, backend=backend, backend_error=backend_error, embedder=make_embedder(settings.embedder))
+        service = cls(
+            settings, repo, backend=backend, backend_error=backend_error, embedder=make_embedder(settings.embedder)
+        )
         service.startup()
         return service
 
@@ -145,7 +147,9 @@ class AuditService:
 
     # -- creating audits --------------------------------------------------------------------------------------------
 
-    def _new_record(self, filename: str, sha256: str, size: int, pages: int | None, control_ids: list[str], chunk_count: int) -> AuditRecord:
+    def _new_record(
+        self, filename: str, sha256: str, size: int, pages: int | None, control_ids: list[str], chunk_count: int
+    ) -> AuditRecord:
         assert self.backend is not None
         return AuditRecord(
             id=new_id(),
@@ -203,7 +207,9 @@ class AuditService:
         if old.status in ACTIVE_STATUSES:
             raise Conflict("This audit is still running.")
         chunks = self.repo.get_chunks(audit_id)
-        record = self._new_record(old.filename, old.sha256, old.size_bytes, old.pages, list(old.control_ids), len(chunks))
+        record = self._new_record(
+            old.filename, old.sha256, old.size_bytes, old.pages, list(old.control_ids), len(chunks)
+        )
         self.repo.create_audit(record, chunks)
         return record
 
@@ -225,7 +231,9 @@ class AuditService:
             raise
         except Exception:  # noqa: BLE001 - the audit records a generic message; the traceback goes to the log
             log.exception("audit %s failed", audit_id)
-            self.repo.finish(audit_id, "failed", error="The audit stopped because of an unexpected error. See the server log.")
+            self.repo.finish(
+                audit_id, "failed", error="The audit stopped because of an unexpected error. See the server log."
+            )
 
     async def _execute(self, audit_id: str) -> None:
         record = self.repo.get_audit(audit_id)
@@ -243,13 +251,17 @@ class AuditService:
                 self.backend, index, top_k=self.settings.top_k, concurrency=self.settings.concurrency, cache=cache
             )
             result = await engine.run(
-                controls, on_finding=lambda f: self.repo.save_finding(audit_id, position[f.control_id], f), cancel=cancel
+                controls,
+                on_finding=lambda f: self.repo.save_finding(audit_id, position[f.control_id], f),
+                cancel=cancel,
             )
             if cancel.is_set():
                 self.repo.finish(audit_id, "cancelled", usage=result.usage)
             elif result.findings and len(result.errors) == len(result.findings):
                 reason = next(iter(result.errors.values()))[:300]
-                self.repo.finish(audit_id, "failed", usage=result.usage, error=f"None of the controls could be assessed. {reason}")
+                self.repo.finish(
+                    audit_id, "failed", usage=result.usage, error=f"None of the controls could be assessed. {reason}"
+                )
             else:
                 self.repo.finish(audit_id, "completed", usage=result.usage)
         except LLMAuthError:
@@ -319,7 +331,11 @@ class AuditService:
         def brief(c):
             return None if c is None else {"id": c.id, "page": c.page, "section": c.section, "text": c.text}
 
-        return {**brief(chunk), "previous": brief(neighbours.get(chunk.ord - 1)), "next": brief(neighbours.get(chunk.ord + 1))}
+        return {
+            **brief(chunk),
+            "previous": brief(neighbours.get(chunk.ord - 1)),
+            "next": brief(neighbours.get(chunk.ord + 1)),
+        }
 
     def report(self, audit_id: str, fmt: str) -> tuple[str, str, str]:
         """Returns (content, media type, suggested file name)."""
@@ -350,4 +366,3 @@ class AuditService:
                 for c in self.catalog.controls
             ],
         }
-
