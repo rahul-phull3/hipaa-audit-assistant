@@ -119,6 +119,15 @@ class ReportTests(unittest.TestCase):
         # gaps are listed before partials
         self.assertLess(md.index("**Gap**"), md.index("**Partial**"))
 
+    def test_confidence_is_shown_only_for_a_language_model(self):
+        offline = render_markdown(self.report)
+        self.assertNotIn("confidence", offline.lower())
+        model_report = build_report(
+            audit(backend="anthropic:claude-sonnet-5-5"), FINDINGS, CATALOG, generated_at="2026-10-24T11:00:00+00:00"
+        )
+        online = render_markdown(model_report)
+        self.assertEqual(online.count("Model confidence: 80%"), 3)  # met, partial and gap; the failed control has none
+
     def test_file_name_markup_is_escaped(self):
         md = render_markdown(self.report)
         self.assertIn(r"Acme \*Security\* Policy.pdf", md)

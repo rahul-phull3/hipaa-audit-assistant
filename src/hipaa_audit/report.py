@@ -51,6 +51,11 @@ _TO_REVIEW_FLAGS = frozenset(
 )
 
 
+def is_language_model(backend: str) -> bool:
+    """False for the offline keyword matcher. Its "confidence" is a fixed number, not a model's, so reports leave it out."""
+    return not backend.startswith("heuristic")
+
+
 def needs_review(flags: Iterable[str]) -> bool:
     """True when a finding carries a flag that means a person should look at it before relying on it."""
     return bool(_TO_REVIEW_FLAGS.intersection(flags))
@@ -254,7 +259,7 @@ def render_markdown(report: dict[str, Any]) -> str:
                 lines += ["Not shown in the document:", ""]
                 lines += [f"- {_md(m)}" for m in f["missing_elements"]]
                 lines.append("")
-            if f["status"] != "error":
+            if f["status"] != "error" and is_language_model(run["backend"]):
                 lines += [f"Model confidence: {f['confidence']:.0%}", ""]
             for flag in f["flags"]:
                 lines += [f"Review note: {FLAG_LABELS.get(flag, _md(flag))}", ""]
