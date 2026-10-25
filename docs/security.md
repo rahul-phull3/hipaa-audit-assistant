@@ -29,8 +29,8 @@ The interface makes no request to any other site: its content security policy al
 the browser test fails on any request that leaves it.
 
 Model API calls use the SDK's own TLS. The key for them (`ANTHROPIC_API_KEY`) is read from the environment or a `.env` file,
-is never returned by the API, and is not stored in the database. Keep it out of the repository (`.env` is ignored by git) and
-out of the image.
+is never returned by the API, is not stored in the database, and is hidden from the settings object's `repr`, so a logged
+settings object does not show it. Keep it out of the repository (`.env` is ignored by git) and out of the image.
 
 ## What the server stores
 

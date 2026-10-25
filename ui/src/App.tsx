@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Api, type ApiError, toApiError } from "./api";
 import { AppContext, type AppState } from "./app-context";
 import { ApiKeyForm } from "./components/ApiKeyForm";
@@ -8,6 +8,12 @@ import { useApiKey, useRoute } from "./hooks";
 import { HomePage } from "./pages/HomePage";
 import { ReviewPage } from "./pages/ReviewPage";
 import type { Catalog, ServerStatus } from "./types";
+
+/** The address of a page is its hash, so the skip link must not follow its own href: it moves focus and leaves the route alone. */
+function skipToContent(event: MouseEvent<HTMLAnchorElement>) {
+  event.preventDefault();
+  document.getElementById("main")?.focus();
+}
 
 export function App() {
   const apiKey = useApiKey();
@@ -49,7 +55,7 @@ export function App() {
 
   return (
     <AppContext.Provider value={state}>
-      <a className="skip-link" href="#main">
+      <a className="skip-link" href="#main" onClick={skipToContent}>
         Skip to the content
       </a>
       <header className="app-header">

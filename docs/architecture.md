@@ -262,7 +262,7 @@ no external fonts or images).
 | --- | --- |
 | `tests/` (Python, `unittest`) | Catalog validation, parsing and chunking, retrieval, quote verification and downgrade rules, both backends (the Anthropic one against a stub client), the engine's failure handling, storage, the service, the API, the CLI, the evaluation harness, and a run against a real `uvicorn` process |
 | `ui/test/` | Formatting, API client behaviour, finding filters and grouping, colour contrast of the palette, and a hygiene check against inline styles and scripts |
-| `ui/e2e/run.mjs` | Fifteen scenarios in a real browser against a real server: upload, the strip, filters, quotes in context, downloads, delete, dark mode, a phone, every state a review can be in, and an API key prompt |
+| `ui/e2e/run.mjs` | Sixteen scenarios in a real browser against a real server: upload, the strip, the skip link, filters, quotes in context, downloads, delete, dark mode, a phone, every state a review can be in, and an API key prompt |
 
 None of these call the Anthropic API. The Anthropic backend is tested against a stand-in for the SDK, so its first real use
 is the first time the request shape meets the live service; see [the verification notes](../README.md#verification-status).

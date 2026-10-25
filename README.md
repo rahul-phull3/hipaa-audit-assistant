@@ -239,7 +239,7 @@ bump `PROMPT_VERSION` so cached answers are not reused. Both are explained in [d
 What has been run, and what has not. This is a first release, and the gaps below are the first things to close.
 
 **Run and passing** (offline, on Linux, as of October 2026): the Python test suite, including tests that damage PDFs and DOCX
-files and a run against a real `uvicorn` process; the interface unit tests; the browser test (15 scenarios in Chromium against
+files and a run against a real `uvicorn` process; the interface unit tests; the browser test (16 scenarios in Chromium against
 a real server with the offline reviewer); lint and formatting; the example in the API documentation, run against a real server.
 
 **Not yet run:**

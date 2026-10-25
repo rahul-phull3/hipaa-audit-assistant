@@ -290,6 +290,13 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual((s.llm_backend, s.concurrency), ("heuristic", 8))
         self.assertEqual(s.cors_origins, ("http://a.test", "http://b.test"))
 
+    def test_printing_the_settings_does_not_show_a_key(self):
+        s = Settings.from_env({"ANTHROPIC_API_KEY": "sk-test-anthropic-1234", "HIPAA_AUDIT_API_KEY": "server-key-5678"})
+        self.assertEqual((s.anthropic_api_key, s.api_key), ("sk-test-anthropic-1234", "server-key-5678"))
+        shown = f"{s!r} {s}"
+        for secret in ("sk-test-anthropic-1234", "server-key-5678"):
+            self.assertNotIn(secret, shown)
+
     def test_allowed_hosts_list(self):
         self.assertEqual(Settings.from_env({}).allowed_hosts, ())
         s = Settings.from_env({"HIPAA_AUDIT_ALLOWED_HOSTS": " Review.Example.com, [::1] ,"})

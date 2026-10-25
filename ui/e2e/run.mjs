@@ -261,6 +261,20 @@ async function main() {
       await finish(h);
     });
 
+    await scenario("keyboard: on a review page the skip link moves focus to the content and leaves the address alone", async () => {
+      const h = await openPage(browser, base);
+      await h.page.goto(`${base}/#/audits/${state.id}`);
+      await h.page.getByRole("heading", { level: 1, name: "sample_policy.md" }).waitFor();
+      const before = h.page.url();
+      await h.page.keyboard.press("Tab");
+      assert.equal(await h.page.evaluate(() => document.activeElement?.textContent), "Skip to the content");
+      await h.page.keyboard.press("Enter");
+      assert.equal(await h.page.evaluate(() => document.activeElement?.id), "main");
+      assert.equal(h.page.url(), before, "using the skip link must not change which page this is");
+      await h.page.getByRole("heading", { level: 1, name: "sample_policy.md" }).waitFor();
+      await finish(h);
+    });
+
     await scenario("the strip and the counts agree with the server, and the arrow keys move along the strip", async () => {
       const h = await openPage(browser, base);
       await h.page.goto(`${base}/#/audits/${state.id}`);

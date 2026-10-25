@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 LLM_BACKENDS = ("anthropic", "heuristic")
@@ -59,7 +59,7 @@ def _int(env: Mapping[str, str], name: str, default: int, minimum: int = 1) -> i
 @dataclass(frozen=True)
 class Settings:
     llm_backend: str = "anthropic"
-    anthropic_api_key: str | None = None
+    anthropic_api_key: str | None = field(default=None, repr=False)  # repr=False: a logged Settings must not show a key
     model: str = "claude-sonnet-5-5"
     effort: str | None = "medium"
     embedder: str = "auto"
@@ -71,7 +71,7 @@ class Settings:
     max_active_audits: int = 2
     cache_enabled: bool = True
     retention_days: int = 0  # 0 keeps audits until they are deleted
-    api_key: str | None = None
+    api_key: str | None = field(default=None, repr=False)
     cors_origins: tuple[str, ...] = ()
     allowed_hosts: tuple[
         str, ...
