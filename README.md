@@ -251,7 +251,9 @@ a real server with the offline reviewer); lint and formatting; the example in th
 - **The container image and the CI workflow.** Both are written; neither has been run on a machine with Docker or on GitHub yet.
 - **The interface's type-check against the real React type definitions.** It was checked against stand-ins, and CI runs the real
   check. There is no `package-lock.json` yet, so interface dependencies resolve when you install.
-- **Installing the package into a clean environment** (`pip install .`). Development used an editable install.
+- **`pip install .` from a clean environment.** A wheel built with setuptools 79 installs and runs outside the source tree, and
+  carries the six catalog files, but the build environment's own setuptools, a distribution-patched 68.1.2 on Python 3.13,
+  fails to build any project, so the one-command install and dependency resolution from PyPI and npm have not been exercised.
 
 ## Documentation
 
