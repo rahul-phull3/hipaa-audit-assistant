@@ -177,7 +177,7 @@ The JSON report has `"schema_version": 1`, and changes to the shape that could b
 | Key | Holds |
 | --- | --- |
 | `schema_version`, `generated_at`, `tool` | The report format, when it was made and by which version |
-| `disclaimer` | What the report is and is not |
+| `disclaimer` | What the report is and is not. It says a language model helped only when one did; a report from the offline keyword matcher says it is not an AI model |
 | `document` | `filename`, `sha256`, `size_bytes`, `pages`, `chunks` |
 | `run` | `audit_id`, `status`, `backend`, `embedder`, `catalog_version`, `current_catalog_version`, `prompt_version`, `controls_requested`, timestamps, `usage`, `error` |
 | `summary` | The same counts as the review's `summary` |

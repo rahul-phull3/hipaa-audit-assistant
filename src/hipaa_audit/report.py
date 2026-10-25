@@ -26,6 +26,14 @@ DISCLAIMER = (
     "It is not legal advice and does not certify HIPAA compliance: a policy that addresses a control does not show that the "
     "control is implemented or effective."
 )
+# The offline reviewer is a keyword matcher. A report it produced must not say a model read the document.
+DISCLAIMER_OFFLINE = (
+    "This report describes what the uploaded policy document says about each control. It was produced by an offline keyword "
+    "matcher, not an AI model, so it finds only passages that share words with a control and under-reports. Every quoted passage "
+    "was checked against the document, and findings should still be reviewed by a person. "
+    "It is not legal advice and does not certify HIPAA compliance: a policy that addresses a control does not show that the "
+    "control is implemented or effective."
+)
 
 STATUS_LABELS = {"met": "Met", "partial": "Partial", "gap": "Gap", "error": "Not assessed"}
 STATUS_ORDER = ("met", "partial", "gap", "error")
@@ -54,6 +62,10 @@ _TO_REVIEW_FLAGS = frozenset(
 def is_language_model(backend: str) -> bool:
     """False for the offline keyword matcher. Its "confidence" is a fixed number, not a model's, so reports leave it out."""
     return not backend.startswith("heuristic")
+
+
+def disclaimer_for(backend: str) -> str:
+    return DISCLAIMER if is_language_model(backend) else DISCLAIMER_OFFLINE
 
 
 def needs_review(flags: Iterable[str]) -> bool:
@@ -113,7 +125,7 @@ def build_report(
         "schema_version": REPORT_SCHEMA_VERSION,
         "generated_at": generated_at or datetime.now(UTC).isoformat(timespec="seconds"),
         "tool": {"name": "hipaa-audit-assistant", "version": __version__},
-        "disclaimer": DISCLAIMER,
+        "disclaimer": disclaimer_for(audit.backend),
         "document": {
             "filename": audit.filename,
             "sha256": audit.sha256,

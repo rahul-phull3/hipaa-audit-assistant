@@ -128,6 +128,19 @@ class ReportTests(unittest.TestCase):
         online = render_markdown(model_report)
         self.assertEqual(online.count("Model confidence: 80%"), 3)  # met, partial and gap; the failed control has none
 
+    def test_the_disclaimer_does_not_claim_a_model_for_the_offline_matcher(self):
+        offline = self.report["disclaimer"]
+        self.assertIn("not an AI model", offline)
+        self.assertNotIn("language model", offline)
+        self.assertIn("not legal advice", offline)
+        self.assertIn(offline, render_markdown(self.report))
+        model_report = build_report(
+            audit(backend="anthropic:claude-sonnet-5-5"), FINDINGS, CATALOG, generated_at="2026-10-24T11:00:00+00:00"
+        )
+        self.assertIn("language model", model_report["disclaimer"])
+        self.assertNotIn("not an AI model", model_report["disclaimer"])
+        self.assertIn("not legal advice", model_report["disclaimer"])
+
     def test_file_name_markup_is_escaped(self):
         md = render_markdown(self.report)
         self.assertIn(r"Acme \*Security\* Policy.pdf", md)
