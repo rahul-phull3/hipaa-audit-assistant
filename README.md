@@ -59,6 +59,9 @@ pip install -e .
 hipaa-audit audit examples/sample_policy.md --backend heuristic      # prints a Markdown report
 ```
 
+There is also a four-page PDF, `examples/clinic_security_policy.pdf`, for trying the PDF path and the Claude reviewer.
+`examples/README.md` lists what it was written to show.
+
 To use the browser interface, build it once and start the server:
 
 ```sh
@@ -213,7 +216,7 @@ explains how to read it, why, and what a real evaluation would need.
 src/hipaa_audit/   the Python package: catalog, ingest, retrieval, assess, storage, service, report, evaluation, api, cli
 ui/                the React interface, its unit tests and the browser test
 tests/             Python tests
-examples/          sample_policy.md, a fictional policy for demonstrations
+examples/          fictional policies for demonstrations: sample_policy.md, and clinic_security_policy as a PDF and Markdown
 docs/              architecture, security, api, evaluation, decision records (adr/)
 Dockerfile, docker-compose.yml, Makefile, .env.example, .github/workflows/ci.yml
 ```
