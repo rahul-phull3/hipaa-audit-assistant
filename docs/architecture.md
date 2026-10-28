@@ -110,7 +110,9 @@ An audit is `queued`, then `running`, then one of `completed`, `failed` or `canc
 - DOCX files are checked as archives before they are opened: the total unpacked size (100 MB) and the number of members
   (5,000) are capped to stop decompression bombs. Tables are read row by row.
 - Headings are detected from Markdown markers, DOCX heading styles and, for plain text and PDF, a few conservative line
-  heuristics. The heading path (for example `Access control > Password management`) travels with every passage.
+  heuristics (a numbered line that reads like a title, or a line in capitals; a single capitalised word after a line that does not
+  end a sentence is an acronym or a table cell, and stays in the text). The heading path (for example
+  `Access control > Password management`) travels with every passage.
 
 `ingest/chunking.py` cuts the blocks into passages of about 200 words, in reading order:
 

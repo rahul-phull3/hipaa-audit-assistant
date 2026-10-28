@@ -17,6 +17,18 @@ class HeadingTests(unittest.TestCase):
         self.assertEqual(heading_of("ACCESS CONTROL POLICY"), (1, "ACCESS CONTROL POLICY"))
         self.assertEqual(heading_of("2.1 Automatic Logoff"), (3, "2.1 Automatic Logoff"))
 
+    def test_an_acronym_on_its_own_line_inside_running_text_is_not_a_heading(self):
+        # A table cell or a wrapped line can leave "CISO" or "HIPAA" alone on a line after a line that does not end a sentence.
+        self.assertIsNone(heading_of("CISO", previous="Systems and databases, only when needed to fix a"))
+        self.assertIsNone(heading_of("HIPAA", previous="the policies required by"))
+        # Headings still count when they start a page or follow the end of a sentence or another heading.
+        self.assertEqual(heading_of("PURPOSE"), (1, "PURPOSE"))
+        self.assertEqual(heading_of("PURPOSE", previous="That is the end of the paragraph."), (1, "PURPOSE"))
+        # More than one word is still taken as a heading, as before.
+        self.assertEqual(
+            heading_of("ACCESS CONTROL POLICY", previous="no full stop here"), (1, "ACCESS CONTROL POLICY")
+        )
+
     def test_rejects_sentences(self):
         self.assertIsNone(heading_of("This policy applies to all staff"))
         self.assertIsNone(heading_of("3. Passwords must be changed"))
@@ -36,6 +48,28 @@ class ParseTextTests(unittest.TestCase):
         self.assertEqual(bullets[0].section, "ACCESS CONTROL POLICY > 2. Password Management")
         logoff = next(b for b in blocks if b.text.startswith("Sessions are logged off"))
         self.assertEqual(logoff.section, "ACCESS CONTROL POLICY > 2. Password Management > 2.1 Automatic Logoff")
+
+    def test_a_table_cell_with_an_acronym_does_not_become_a_section(self):
+        text = (
+            "4. Workforce security\n"
+            "Access to ePHI is granted only after the data owner approves a written request that states the role and the systems needed.\n"
+            "Role Access to ePHI Approved by\n"
+            "Billing staff Billing and claims data Finance\n"
+            "manager\n"
+            "IT\n"
+            "administrator\n"
+            "Systems and databases, clinical content only when needed to fix a\n"
+            "fault\n"
+            "CISO\n"
+            "Volunteer None Not applicable\n"
+            "4.2 Leaving the Clinic\n"
+            "When a workforce member leaves or an engagement ends, their accounts are disabled on their last working day.\n"
+        )
+        blocks = parse_document("policy.txt", text.encode())
+        self.assertNotIn("CISO", [b.text for b in blocks if b.is_heading])
+        leaving = next(b for b in blocks if b.text.startswith("When a workforce member leaves"))
+        self.assertEqual(leaving.section, "4. Workforce security > 4.2 Leaving the Clinic")
+        self.assertTrue(any("CISO Volunteer None" in b.text for b in blocks))  # the cell stays in the text
 
     def test_markdown_headings(self):
         md = "# Security Policy\n\n## Backups\nBackups of every system that holds ePHI are taken daily and stored off-site in encrypted form.\nThey are tested every quarter."

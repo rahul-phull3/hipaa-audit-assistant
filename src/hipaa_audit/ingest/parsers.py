@@ -49,8 +49,13 @@ class _Outline:
         return " > ".join(title for _, title in self.stack)
 
 
-def heading_of(line: str) -> tuple[int, str] | None:
-    """Heuristic heading detection for plain text and PDF lines. Returns (level, title) or None."""
+def heading_of(line: str, *, previous: str | None = None) -> tuple[int, str] | None:
+    """Heuristic heading detection for plain text and PDF lines. Returns (level, title) or None.
+
+    ``previous`` is the line before this one when it belongs to the same run of text (``None`` at the start of a page or after a
+    heading or a blank line). A single capitalised word on a line after one that does not end a sentence is an acronym that wrapped
+    or a table cell, not a heading, so it is left in the text.
+    """
     s = line.strip()
     if not s or len(s) > 100:
         return None
@@ -65,6 +70,8 @@ def heading_of(line: str) -> tuple[int, str] | None:
         return m.group(1).count(".") + 2, s  # level 1 is reserved for a document title
     letters = [ch for ch in s if ch.isalpha()]
     if len(letters) >= 4 and s == s.upper() and len(words) <= 10:
+        if len(words) == 1 and previous is not None and not previous.strip().endswith((".", "!", "?", ":", ";")):
+            return None
         return 1, s
     return None
 
@@ -81,21 +88,25 @@ def _paragraphs(text: str, page: int | None, outline: _Outline) -> list[Block]:
                 blocks.append(Block(text=body, page=page, section=outline.path))
             current.clear()
 
+    previous: str | None = None  # the line before this one, while it is part of the same run of text
     for raw in text.splitlines():
         line = raw.strip()
         if not line:
             flush()
+            previous = None
             continue
-        found = heading_of(line)
+        found = heading_of(line, previous=previous)
         if found:
             flush()
             level, title = found
             outline.push(level, title)
             blocks.append(Block(text=title, page=page, section=outline.path, is_heading=True))
+            previous = None
             continue
         if _BULLET.match(raw):
             flush()
         current.append(line)
+        previous = line
     flush()
     return blocks
 
