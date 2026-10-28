@@ -20,11 +20,12 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from hipaa_audit.assess.grounding import control_reference
 from hipaa_audit.assess.injection import scan_chunks
-from hipaa_audit.assess.llm import LLMAuthError, LLMBackend, LLMError
+from hipaa_audit.assess.llm import HeuristicBackend, LLMAuthError, LLMBackend, LLMError
 from hipaa_audit.assess.prompts import PROMPT_VERSION
 from hipaa_audit.assess.schema import RawAssessment
-from hipaa_audit.assess.verify import finalize
+from hipaa_audit.assess.verify import finalize, verify_evidence
 from hipaa_audit.catalog import Control
 from hipaa_audit.models import Chunk, Finding, Usage
 from hipaa_audit.retrieval import HybridIndex
@@ -32,6 +33,7 @@ from hipaa_audit.retrieval import HybridIndex
 log = logging.getLogger(__name__)
 
 FindingCallback = Callable[[Finding], Awaitable[None] | None]
+MAX_MISSED_PASSAGES = 2  # how many unseen passages a gap may add to its list of closest passages
 
 
 class AssessmentCache(Protocol):
@@ -101,10 +103,41 @@ class AssessmentEngine:
             raw, used = await self.backend.assess(control, excerpts)
             if self.cache:
                 self.cache.put(key, raw)
-        finding = finalize(control.id, raw, excerpts, model=self.backend.name, from_cache=from_cache)
+        finding = finalize(
+            control.id,
+            raw,
+            excerpts,
+            model=self.backend.name,
+            from_cache=from_cache,
+            reference=control_reference(control),
+        )
+        if finding.status == "gap" and not isinstance(self.backend, HeuristicBackend):
+            finding = await self._second_look(control, finding, excerpts)
         if any(injections.get(c.id) for c in excerpts):
             finding.flags = sorted({*finding.flags, "injection_suspected"})
         return finding, used
+
+    async def _second_look(self, control: Control, finding: Finding, shown: list[Chunk]) -> Finding:
+        """A gap says that the passages the reviewer was shown do not address the control. Search only shows it a few, so the rest of
+        the document gets a keyword look, and a strong match there is listed under the closest passages and flagged for a person.
+        The status stays the reviewer's. (The offline matcher is this same look, so it does not get a second one.)"""
+        shown_ids = {c.id for c in shown}
+        unseen = [c for c in self.index.chunks if c.id not in shown_ids]
+        if not unseen:
+            return finding
+        raw, _ = await HeuristicBackend().assess(control, unseen)
+        if raw.status == "gap":
+            return finding
+        found, _ = verify_evidence(raw, unseen)
+        if not found:
+            return finding
+        known = {(e.chunk_id, e.quote) for e in finding.evidence}
+        extra = [e for e in found if (e.chunk_id, e.quote) not in known][:MAX_MISSED_PASSAGES]
+        if not extra:
+            return finding
+        finding.evidence = [*finding.evidence, *extra]
+        finding.flags = sorted({*finding.flags, "possible_missed_passage"})
+        return finding
 
     async def run(
         self,

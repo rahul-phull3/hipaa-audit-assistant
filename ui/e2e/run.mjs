@@ -365,6 +365,7 @@ async function main() {
       await h.page.locator(`.strip .cell[aria-label="${withEvidence.control.title}: gap"]`).click();
       const open = h.page.locator('.finding[data-open="true"]');
       await open.getByText("Closest passages in the document. These do not count as support.").waitFor();
+      await open.getByText(/The reviewer was shown \d+ passages? of the document for this control\. If the document covers it somewhere else, that part was not seen\./).waitFor();
       await open.scrollIntoViewIfNeeded();
       await shot(h.page, "06-gap-with-closest-passages.png");
       await finish(h);
@@ -384,6 +385,7 @@ async function main() {
       const parsed = JSON.parse(readFileSync(await json.path(), "utf8"));
       assert.equal(parsed.schema_version, 1);
       assert.equal(parsed.findings.length, state.catalogSize);
+      assert.ok(parsed.findings.every((f) => Number.isInteger(f.passages_seen)), "every finding says how many passages the reviewer saw");
       await finish(h);
     });
 

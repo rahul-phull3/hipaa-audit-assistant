@@ -126,7 +126,9 @@ class ReportTests(unittest.TestCase):
             audit(backend="anthropic:claude-sonnet-5-5"), FINDINGS, CATALOG, generated_at="2026-10-24T11:00:00+00:00"
         )
         online = render_markdown(model_report)
-        self.assertEqual(online.count("Model confidence: 80%"), 3)  # met, partial and gap; the failed control has none
+        self.assertEqual(
+            online.count("its own estimate and not checked against outcomes: 80%"), 3
+        )  # met, partial and gap; the failed control has none
 
     def test_the_disclaimer_does_not_claim_a_model_for_the_offline_matcher(self):
         offline = self.report["disclaimer"]
@@ -140,6 +142,22 @@ class ReportTests(unittest.TestCase):
         self.assertIn("language model", model_report["disclaimer"])
         self.assertNotIn("not an AI model", model_report["disclaimer"])
         self.assertIn("not legal advice", model_report["disclaimer"])
+
+    def test_a_gap_says_how_many_passages_the_reviewer_was_shown(self):
+        seen = finding("automatic-logoff", "gap", retrieved_chunk_ids=["c0001", "c0004", "c0007"])
+        met = finding("data-backup-plan", "met", retrieved_chunk_ids=["c0001", "c0002"])
+        none = finding("login-monitoring", "gap", flags=["no_excerpts"])
+        report = build_report(audit(), [seen, met, none], CATALOG)
+        self.assertEqual(
+            {f["control"]["id"]: f["passages_seen"] for f in report["findings"]},
+            {"automatic-logoff": 3, "data-backup-plan": 2, "login-monitoring": 0},
+        )
+        md = render_markdown(report)
+        self.assertEqual(md.count("The reviewer was shown"), 1)  # only the gap that had passages
+        self.assertIn("The reviewer was shown 3 passages of the document for this control.", md)
+        self.assertIn("that part was not seen", md)
+        one = build_report(audit(), [finding("automatic-logoff", "gap", retrieved_chunk_ids=["c0001"])], CATALOG)
+        self.assertIn("shown 1 passage of the document", render_markdown(one))
 
     def test_file_name_markup_is_escaped(self):
         md = render_markdown(self.report)

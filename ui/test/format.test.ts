@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { describeBackend, formatBytes, percent, plural, relativeTime, shortHash } from "../src/format";
+import { coverageNote, describeBackend, formatBytes, percent, plural, relativeTime, shortHash } from "../src/format";
 
 const NOW = Date.parse("2026-10-24T12:00:00Z");
 const ago = (seconds: number) => new Date(NOW - seconds * 1000).toISOString();
@@ -35,4 +35,12 @@ test("the offline reviewer is never called a model", () => {
   assert.deepEqual(describeBackend("heuristic:keywords"), { label: "Offline keyword matching", isModel: false });
   assert.deepEqual(describeBackend("claude-sonnet-5-5"), { label: "claude-sonnet-5-5", isModel: true });
   assert.equal(shortHash("0123456789abcdef"), "0123456789ab");
+});
+
+test("a gap says how much of the document the reviewer saw", () => {
+  assert.equal(
+    coverageNote(3),
+    "The reviewer was shown 3 passages of the document for this control. If the document covers it somewhere else, that part was not seen.",
+  );
+  assert.match(coverageNote(1), /shown 1 passage of the document/);
 });

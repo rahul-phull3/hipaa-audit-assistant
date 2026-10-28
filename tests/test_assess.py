@@ -27,10 +27,10 @@ CHUNKS = [
 ]
 
 
-def raw(status, quotes, missing=(), confidence=0.8):
+def raw(status, quotes, missing=(), confidence=0.8, rationale="Because."):
     return RawAssessment(
         status=status,
-        rationale="Because.",
+        rationale=rationale,
         evidence=[RawEvidence(excerpt_id=i, quote=q) for i, q in quotes],
         missing_elements=list(missing),
         confidence=confidence,
@@ -176,6 +176,132 @@ class FinalizeTests(unittest.TestCase):
     def test_confidence_is_clamped(self):
         self.assertEqual(RawAssessment(status="gap", confidence=7).confidence, 1.0)
         self.assertEqual(RawAssessment(status="gap", confidence="bad").confidence, 0.5)
+
+
+class OwnWordsTests(unittest.TestCase):
+    """The rationale and the missing elements are the model's sentences. A number in them must come from the document."""
+
+    QUOTE = [("c0001", "Backups of every system that holds ePHI are taken daily.")]
+
+    def test_a_number_the_passages_do_not_contain_is_flagged_and_named(self):
+        f = finalize("x", raw("met", self.QUOTE, rationale="Backups are taken every six hours."), CHUNKS, model="m")
+        self.assertEqual(f.status, "met")  # the status is not the checks' to change; a person decides
+        self.assertIn("ungrounded_quantity", f.flags)
+        self.assertIn("six hours", f.rationale)
+        self.assertIn("Check:", f.rationale)
+
+    def test_a_number_in_the_passages_is_fine_however_it_is_written(self):
+        words = "Backups are taken daily and tested quarterly, once every 3 months."
+        f = finalize("x", raw("met", self.QUOTE, rationale=words), CHUNKS, model="m")
+        self.assertEqual((f.flags, f.rationale), ([], words))
+
+    def test_a_number_that_only_the_control_states_needs_the_reference(self):
+        text = "The policy does not state the six year retention period."
+        quote = [("c0001", "They are encrypted and stored off-site")]
+        without = finalize("x", raw("partial", quote, rationale=text), CHUNKS, model="m")
+        self.assertIn("ungrounded_quantity", without.flags)
+        with_reference = finalize(
+            "x", raw("partial", quote, rationale=text), CHUNKS, model="m", reference="Keep records for six years."
+        )
+        self.assertNotIn("ungrounded_quantity", with_reference.flags)
+
+    def test_missing_elements_are_checked_too(self):
+        f = finalize(
+            "x",
+            raw("partial", self.QUOTE, missing=["A restore test every 90 days"]),
+            CHUNKS,
+            model="m",
+        )
+        self.assertIn("ungrounded_quantity", f.flags)
+        self.assertIn("90 days", f.rationale)
+
+    def test_the_flag_asks_for_review_and_has_a_label(self):
+        from hipaa_audit.report import FLAG_LABELS, needs_review
+
+        self.assertTrue(needs_review(["ungrounded_quantity"]))
+        self.assertIn("ungrounded_quantity", FLAG_LABELS)
+
+
+NEGATED = Chunk(
+    id="c0010",
+    ord=9,
+    page=2,
+    section="Email",
+    n_words=30,
+    text=(
+        "Workforce members must not send ePHI by ordinary email or by text message.\n"
+        "The approved methods are the patient portal and SFTP, except in an emergency approved by the CISO. "
+        "No ePHI leaves the building. Backups are stored off-site."
+    ),
+)
+
+
+CLAUSES = Chunk(
+    id="c0011",
+    ord=10,
+    page=3,
+    section="Logging",
+    n_words=40,
+    text=(
+        "Logs are sent to a central logging service, where system administrators cannot change them, and are kept for "
+        "12 months. Users must not share passwords and must lock screens when they step away."
+    ),
+)
+
+
+class QuoteContextTests(unittest.TestCase):
+    """A true quote can still lose the word that reverses it. The check looks next to the quote, in the same clause."""
+
+    def flags(self, quote, status="met", chunk=NEGATED):
+        return verify_evidence(raw(status, [(chunk.id, quote)]), [chunk])[1]
+
+    def test_a_quote_that_starts_after_not_is_flagged(self):
+        self.assertIn("quote_drops_negation", self.flags("send ePHI by ordinary email or by text message"))
+
+    def test_a_quote_that_stops_before_an_exception_is_flagged(self):
+        self.assertIn("quote_drops_negation", self.flags("The approved methods are the patient portal and SFTP"))
+
+    def test_an_ellipsis_that_skips_a_not_is_flagged(self):
+        self.assertIn("quote_drops_negation", self.flags("Workforce members must ... send ePHI by ordinary email"))
+
+    def test_a_quote_that_keeps_the_negation_is_fine(self):
+        self.assertEqual(self.flags("must not send ePHI by ordinary email"), [])
+        self.assertEqual(self.flags("Workforce members must not send ePHI by ordinary email or by text message."), [])
+
+    def test_a_whole_sentence_is_not_judged_by_the_sentence_after_it(self):
+        quote = "Workforce members must not send ePHI by ordinary email or by text message."
+        self.assertEqual(self.flags(quote), [])
+        self.assertEqual(self.flags("Backups are stored off-site."), [])  # "No ePHI..." is the sentence before
+
+    def test_an_ellipsis_that_joins_two_sentences_is_flagged(self):
+        within_a_paragraph = "The approved methods are ... Backups are stored off-site."
+        self.assertIn("quote_joins_sentences", self.flags(within_a_paragraph))
+        self.assertNotIn("quote_joins_sentences", self.flags("The approved methods are ... and SFTP"))
+
+    def test_a_quote_that_runs_from_one_paragraph_into_the_next_is_flagged(self):
+        quote = "Workforce members must ... the patient portal and SFTP"
+        self.assertIn("quote_joins_sentences", self.flags(quote))
+
+    def test_a_not_in_another_clause_does_not_count(self):
+        self.assertEqual(self.flags("kept for 12 months", chunk=CLAUSES), [])
+        self.assertEqual(self.flags("must lock screens when they step away", chunk=CLAUSES), [])
+
+    def test_an_ellipsis_over_a_clause_with_its_own_not_is_fine(self):
+        quote = "Logs are sent to a central logging service ... kept for 12 months"
+        self.assertEqual(self.flags(quote, chunk=CLAUSES), [])
+
+    def test_a_not_that_the_quote_itself_keeps_is_fine(self):
+        self.assertEqual(self.flags("must not ... by ordinary email"), [])
+
+    def test_a_gap_is_not_judged_because_its_quotes_do_not_count_as_support(self):
+        self.assertEqual(self.flags("send ePHI by ordinary email or by text message", status="gap"), [])
+
+    def test_the_flag_asks_for_review_and_has_a_label(self):
+        from hipaa_audit.report import FLAG_LABELS, needs_review
+
+        for flag in ("quote_drops_negation", "quote_joins_sentences"):
+            self.assertTrue(needs_review([flag]))
+            self.assertIn(flag, FLAG_LABELS)
 
 
 class InjectionTests(unittest.TestCase):

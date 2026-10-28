@@ -42,3 +42,8 @@ export function describeBackend(name: string): BackendDescription {
 export function shortHash(hash: string): string {
   return hash.slice(0, 12);
 }
+
+/** What a gap does and does not say: the reviewer sees only the few passages that search put in front of it. */
+export function coverageNote(passagesSeen: number): string {
+  return `The reviewer was shown ${plural(passagesSeen, "passage")} of the document for this control. If the document covers it somewhere else, that part was not seen.`;
+}

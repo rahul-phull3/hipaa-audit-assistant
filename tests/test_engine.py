@@ -7,6 +7,7 @@ from hipaa_audit.assess.schema import RawAssessment, RawEvidence
 from hipaa_audit.catalog import load_catalog
 from hipaa_audit.models import Chunk, Usage
 from hipaa_audit.retrieval import HashingEmbedder, HybridIndex
+from hipaa_audit.retrieval.hybrid import Hit
 
 CATALOG = load_catalog()
 BACKUP = CATALOG.get("data-backup-plan")
@@ -249,3 +250,65 @@ class EngineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FixedIndex:
+    """An index whose search always returns the same passages, so a test can decide what the reviewer was shown."""
+
+    def __init__(self, chunks, shown_ids):
+        self.chunks = chunks
+        self._shown = [c for c in chunks if c.id in shown_ids]
+
+    def search(self, queries, k=6, depth=20):
+        return [Hit(chunk=c, score=1.0, bm25_rank=1, dense_rank=1, matched_queries=1) for c in self._shown]
+
+
+class SecondLookTests(unittest.TestCase):
+    """A gap says the passages the reviewer was shown do not address a control. The rest of the document gets a keyword look."""
+
+    def setUp(self):
+        self.chunks = make_index(*POLICY).chunks  # the automatic logoff sentence is c0003
+
+    def assess(self, shown, backend=None, control=LOGOFF):
+        engine = AssessmentEngine(backend or ScriptedBackend(), FixedIndex(self.chunks, shown))
+        return run(engine.run([control])).findings[0]
+
+    def test_a_gap_is_flagged_when_a_passage_that_was_not_shown_matches_strongly(self):
+        finding = self.assess({"c0004"})  # only the cafeteria was shown
+        self.assertEqual(finding.status, "gap")  # the status is the reviewer's; a person decides
+        self.assertIn("possible_missed_passage", finding.flags)
+        self.assertEqual([e.chunk_id for e in finding.evidence], ["c0003"])
+        self.assertEqual((finding.evidence[0].page, finding.evidence[0].section), (3, "S2"))
+        self.assertIn("inactivity", finding.evidence[0].quote)
+        self.assertEqual(finding.retrieved_chunk_ids, ["c0004"])  # what the reviewer saw is not rewritten
+
+    def test_nothing_is_added_when_the_rest_of_the_document_has_no_strong_match(self):
+        finding = self.assess({"c0001"}, control=BACKUP)  # backups: the rest is about passwords, logoff and lunch
+        self.assertNotIn("possible_missed_passage", finding.flags)
+        self.assertEqual(finding.evidence, [])
+
+    def test_a_passage_that_was_shown_is_not_a_missed_one(self):
+        finding = self.assess({"c0003"})
+        self.assertNotIn("possible_missed_passage", finding.flags)
+
+    def test_only_a_gap_gets_a_second_look(self):
+        answer = RawAssessment(
+            status="partial",
+            rationale="Some.",
+            evidence=[RawEvidence(excerpt_id="c0004", quote="The cafeteria is open from eight until three")],
+            missing_elements=["x"],
+            confidence=0.6,
+        )
+        finding = self.assess({"c0004"}, backend=ScriptedBackend({"automatic-logoff": answer}))
+        self.assertEqual(finding.status, "partial")
+        self.assertNotIn("possible_missed_passage", finding.flags)
+
+    def test_the_offline_matcher_is_not_looked_at_twice(self):
+        finding = self.assess({"c0004"}, backend=HeuristicBackend())
+        self.assertNotIn("possible_missed_passage", finding.flags)
+
+    def test_the_flag_asks_for_review_and_has_a_label(self):
+        from hipaa_audit.report import FLAG_LABELS, needs_review
+
+        self.assertTrue(needs_review(["possible_missed_passage"]))
+        self.assertIn("possible_missed_passage", FLAG_LABELS)

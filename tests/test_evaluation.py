@@ -232,7 +232,8 @@ class RunnerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(report["evidence"]["claims_quoting_own_text_rate"], 1.0)
             self.assertEqual(report["evidence"]["quotes_in_own_text_rate"], 1.0)
             self.assertGreaterEqual(report["retrieval"]["any_sentence_retrieved_rate"], 0.95)
-            self.assertEqual(report["flags"], {})
+            # A careful reader is never downgraded. The keyword second look at a gap may still ask for a look at a vague mention.
+            self.assertEqual(set(report["flags"]) - {"possible_missed_passage"}, set())
 
     async def test_a_backend_that_makes_up_support_cannot_get_a_met(self):
         result = await evaluate(lambda _policy: Fabricator(), seeds=[1], difficulty="easy")

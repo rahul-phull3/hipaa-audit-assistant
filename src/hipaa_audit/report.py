@@ -50,13 +50,35 @@ FLAG_LABELS = {
     "evidence_id_corrected": "A quote was attributed to the wrong excerpt and was re-attached to the right one.",
     "unsupported_downgraded": "The model claimed support that could not be verified, so the status was lowered to gap.",
     "met_with_missing_downgraded": "The model marked this met while listing missing elements, so it was lowered to partial.",
+    "quote_drops_negation": 'A quote leaves out a nearby word such as "not", "never" or "except" from its sentence. Read the whole sentence before relying on it.',
+    "quote_joins_sentences": "A quote joins parts of different sentences with an ellipsis, which can read as something the document does not say. Read the passage.",
+    "ungrounded_quantity": "The explanation names a number or period that is not in the passages the reviewer was shown. Check it against the document.",
+    "possible_missed_passage": "A passage the reviewer was not shown may address this control. It is listed with the closest passages. Read it.",
     "injection_suspected": "A retrieved passage contains text that looks like an instruction to an AI system. Review it.",
     "no_excerpts": "No part of the document could be matched to this control.",
     "assessment_failed": "The model could not assess this control. Run the audit again to retry it.",
 }
 _TO_REVIEW_FLAGS = frozenset(
-    {"injection_suspected", "unsupported_downgraded", "met_with_missing_downgraded", "assessment_failed"}
+    {
+        "injection_suspected",
+        "unsupported_downgraded",
+        "met_with_missing_downgraded",
+        "assessment_failed",
+        "quote_drops_negation",
+        "quote_joins_sentences",
+        "ungrounded_quantity",
+        "possible_missed_passage",
+    }
 )
+
+
+def coverage_note(passages_seen: int) -> str:
+    """What a gap does and does not say: the reviewer sees only the few passages that search put in front of it."""
+    many = "passages" if passages_seen != 1 else "passage"
+    return (
+        f"The reviewer was shown {passages_seen} {many} of the document for this control. "
+        "If the document covers it somewhere else, that part was not seen."
+    )
 
 
 def is_language_model(backend: str) -> bool:
@@ -160,6 +182,7 @@ def build_report(
                 "missing_elements": f.missing_elements,
                 "confidence": f.confidence,
                 "flags": f.flags,
+                "passages_seen": len(f.retrieved_chunk_ids),
             }
             for f in ordered
         ],
@@ -262,6 +285,8 @@ def render_markdown(report: dict[str, Any]) -> str:
             lines += [" · ".join(meta), ""]
             if f["rationale"]:
                 lines += [_md(f["rationale"]), ""]
+            if f["status"] == "gap" and f["passages_seen"]:
+                lines += [coverage_note(f["passages_seen"]), ""]
             if f["status"] == "gap" and f["evidence"]:
                 lines += ["Closest passages in the document (these do not count as support):", ""]
             for e in f["evidence"]:
@@ -272,7 +297,10 @@ def render_markdown(report: dict[str, Any]) -> str:
                 lines += [f"- {_md(m)}" for m in f["missing_elements"]]
                 lines.append("")
             if f["status"] != "error" and is_language_model(run["backend"]):
-                lines += [f"Model confidence: {f['confidence']:.0%}", ""]
+                lines += [
+                    f"Model confidence, its own estimate and not checked against outcomes: {f['confidence']:.0%}",
+                    "",
+                ]
             for flag in f["flags"]:
                 lines += [f"Review note: {FLAG_LABELS.get(flag, _md(flag))}", ""]
 

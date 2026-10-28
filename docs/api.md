@@ -145,14 +145,22 @@ The values above are illustrative.
 - Every `evidence[].quote` was checked against the document text. `page` and `section` say where the quote really is.
 - **On a `gap`, `evidence` is not support.** It lists the closest passages the reviewer found, for context.
 - `flags` explain what the server did or noticed: `quote_not_found`, `quote_too_short`, `evidence_id_corrected`,
-  `unsupported_downgraded`, `met_with_missing_downgraded`, `injection_suspected`, `no_excerpts`, `assessment_failed`.
+  `unsupported_downgraded`, `met_with_missing_downgraded`, `quote_drops_negation`, `quote_joins_sentences`,
+  `ungrounded_quantity`, `possible_missed_passage`, `injection_suspected`, `no_excerpts`, `assessment_failed`.
   `GET /api/controls` returns a plain-language label for each.
 - `needs_review` is true when a flag is one of `injection_suspected`, `unsupported_downgraded`,
-  `met_with_missing_downgraded` or `assessment_failed`.
+  `met_with_missing_downgraded`, `assessment_failed`, `quote_drops_negation`, `quote_joins_sentences`,
+  `ungrounded_quantity` or `possible_missed_passage`. The last four are raised when the server cannot call something wrong
+  but a person should look: a quote that leaves out a nearby "not" or "except", a quote joined from two sentences, a number
+  in the rationale or the missing elements that is not in the passages the reviewer was shown (it is named in the
+  rationale), and, on a gap from a language model, a strong keyword match in a passage the reviewer was not shown (it is
+  added to the closest passages; the status stays as the reviewer gave it).
 - `confidence` is the model's own estimate between 0 and 1. For the offline keyword reviewer it is a fixed number (0.5, or 0.3
   for a gap) and should be ignored.
-- `retrieved_chunk_ids` are the passages the reviewer was shown, in document order. `from_cache` is true when the answer was
-  reused from an earlier review of identical text.
+- `retrieved_chunk_ids` are the passages the reviewer was shown, in document order. A `gap` means those passages did not
+  address the control, not that the whole document is silent; reports say how many passages the reviewer saw
+  (`passages_seen` in the report JSON). `from_cache` is true when the answer was reused from an earlier review of identical
+  text.
 
 ### A passage in context
 

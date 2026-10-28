@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { useApp } from "../app-context";
 import { toApiError } from "../api";
 import { type Row, STATUS_LABELS, locateQuote, locationLabel, statusOf } from "../findings";
-import { percent } from "../format";
+import { coverageNote, percent } from "../format";
 import type { Evidence, Passage, PassageContext } from "../types";
 import { StatusMark } from "./StatusMark";
 
@@ -57,6 +57,9 @@ export function FindingRow({ auditId, row, open, onToggle, showConfidence }: Pro
             {finding ? (
               <>
                 <p className="verdict">{finding.rationale}</p>
+                {status === "gap" && finding.retrieved_chunk_ids.length > 0 ? (
+                  <p className="evidence-note">{coverageNote(finding.retrieved_chunk_ids.length)}</p>
+                ) : null}
                 {finding.evidence.length > 0 ? (
                   <section className="evidence" aria-label="Passages from the document">
                     {status === "gap" ? (
@@ -83,7 +86,9 @@ export function FindingRow({ auditId, row, open, onToggle, showConfidence }: Pro
                   </p>
                 ))}
                 {showConfidence && status !== "error" ? (
-                  <p className="confidence">Reviewer confidence {percent(finding.confidence)}</p>
+                  <p className="confidence" title="The reviewer's own estimate. It has not been checked against outcomes.">
+                    Reviewer confidence, its own estimate: {percent(finding.confidence)}
+                  </p>
                 ) : null}
               </>
             ) : (
